@@ -1,4 +1,4 @@
-import { defineCollection } from 'astro:content';
+import { defineCollection, reference } from 'astro:content';
 import { glob } from 'astro/loaders';
 import { z } from 'astro/zod';
 
@@ -14,7 +14,35 @@ const blog = defineCollection({
 			pubDate: z.coerce.date(),
 			updatedDate: z.coerce.date().optional(),
 			heroImage: z.optional(image()),
+			author: reference('authors'),
 		}),
 });
 
-export const collections = { blog };
+const authors = defineCollection({
+	loader: glob({ base: './src/content/authors', pattern: '**/*.{md,mdx}' }),
+	schema: ({ image }) =>
+		z.object({
+			name: z.string(),
+			title: z.string().optional(),
+			bio: z.string(),
+			avatar: image(),
+			socialLinks: z
+				.array(
+					z.object({
+						label: z.string(),
+						url: z.string().url(),
+					}),
+				)
+				.optional(),
+			socials: z
+				.array(
+					z.object({
+						label: z.string(),
+						url: z.string().url(),
+					}),
+				)
+				.optional(),
+		}),
+});
+
+export const collections = { blog, authors };
