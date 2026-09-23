@@ -1,7 +1,8 @@
 import eslintPluginAstro from "eslint-plugin-astro";
-import tseslint from "typescript-eslint";
+import { defineConfig } from 'eslint/config'
+import tseslint from 'typescript-eslint'
 
-export default tseslint.config(
+export default defineConfig([
   // 1. Tell ESLint to ignore auto-generated Astro files
   {
     ignores: [".astro/**", "node_modules/**", "dist/**"]
@@ -26,4 +27,4 @@ export default tseslint.config(
       // You can add custom rule overrides here later if needed
     },
   }
-);
+]);
