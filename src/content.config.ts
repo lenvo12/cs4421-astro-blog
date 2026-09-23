@@ -30,7 +30,7 @@ const authors = defineCollection({
 				.array(
 					z.object({
 						label: z.string(),
-						url: z.string().url(),
+						url: z.url(),
 					}),
 				)
 				.optional(),
@@ -38,7 +38,7 @@ const authors = defineCollection({
 				.array(
 					z.object({
 						label: z.string(),
-						url: z.string().url(),
+						url: z.url(),
 					}),
 				)
 				.optional(),
