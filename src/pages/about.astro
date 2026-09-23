@@ -1,13 +1,20 @@
 ---
-import AboutHeroImage from '../assets/blog-placeholder-about.jpg';
 import Layout from '../layouts/BlogPost.astro';
+import { getEntry } from 'astro:content';
+
+const authorEntry = await getEntry('authors', 'jordan-smith');
+
+if (!authorEntry) {
+	throw new Error("Could not find author 'jordan-smith' in the authors collection");
+}
 ---
 
 <Layout
 	title="About Me"
 	description="Lorem ipsum dolor sit amet"
 	pubDate={new Date('August 08 2021')}
-	heroImage={AboutHeroImage}
+	heroImage={authorEntry.data.avatar}
+	author={authorEntry}
 >
 	<p>
 		Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut
