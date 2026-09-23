@@ -10,7 +10,8 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "check": "set ASTRO_SKIP_NATIVE_BUILD=1&& astro check"
+    "check": "set ASTRO_SKIP_NATIVE_BUILD=1&& astro check",
+    "lint": "eslint ."
   },
   "dependencies": {
     "@astrojs/check": "^0.9.10",
@@ -23,5 +24,10 @@
   },
   "allowScripts": {
     "esbuild": true
+  },
+  "devDependencies": {
+    "eslint": "^10.11.0",
+    "eslint-plugin-astro": "^3.2.1",
+    "typescript-eslint": "^8.70.1"
   }
 }
