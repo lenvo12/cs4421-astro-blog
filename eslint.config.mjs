@@ -5,7 +5,7 @@ import tseslint from 'typescript-eslint'
 export default defineConfig([
   // 1. Tell ESLint to ignore auto-generated Astro files
   {
-    ignores: [".astro/**", "node_modules/**", "dist/**"]
+    ignores: [".astro/**", "node_modules/**", "dist/**", "cdk/cdk.out/**"]
   },
 
   // 2. Applies recommended rules to standard JavaScript/TypeScript files
