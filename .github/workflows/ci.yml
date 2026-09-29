@@ -28,6 +28,10 @@ jobs:
       - name: Install Astro dependencies
         run: npm ci
 
+      - name: Install CDK dependencies
+        run: npm ci
+        working-directory: cdk
+
       - name: Run Astro unit tests
         run: npm run test:unit
 
@@ -39,10 +43,6 @@ jobs:
 
       - name: Build Astro site
         run: npm run build
-
-      - name: Install CDK dependencies
-        run: npm ci
-        working-directory: cdk
 
       - name: Run CDK tests
         run: npm test

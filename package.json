@@ -12,7 +12,7 @@
     "astro": "astro",
     "check": "set ASTRO_SKIP_NATIVE_BUILD=1&& astro check",
     "lint": "eslint .",
-    "test:unit": "vitest --exclude cdk/**"
+    "test:unit": "vitest run src"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.10",
