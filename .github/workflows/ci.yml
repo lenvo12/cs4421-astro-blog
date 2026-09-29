@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            cdk/package-lock.json
+
+      - name: Install Astro dependencies
+        run: npm ci
+
+      - name: Run Astro unit tests
+        run: npm run test:unit
+
+      - name: Check Astro project
+        run: npx astro check
+
+      - name: Lint Astro project
+        run: npm run lint
+
+      - name: Build Astro site
+        run: npm run build
+
+      - name: Install CDK dependencies
+        run: npm ci
+        working-directory: cdk
+
+      - name: Run CDK tests
+        run: npm test
+        working-directory: cdk
+
+      - name: Build CDK project
+        run: npm run build
+        working-directory: cdk
