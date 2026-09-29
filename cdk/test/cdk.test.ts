@@ -1,17 +1,43 @@
-// import * as cdk from 'aws-cdk-lib/core';
-// import { Template } from 'aws-cdk-lib/assertions';
-// import * as Cdk from '../lib/cdk-stack';
+import * as cdk from 'aws-cdk-lib';
+import { Match, Template } from 'aws-cdk-lib/assertions';
+import { StaticSiteStack } from '../lib/static-site-stack';
 
-// example test. To run these tests, uncomment this file along with the
-// example resource in lib/cdk-stack.ts
-test('SQS Queue Created', () => {
-//   const app = new cdk.App();
-//     // WHEN
-//   const stack = new Cdk.CdkStack(app, 'MyTestStack');
-//     // THEN
-//   const template = Template.fromStack(stack);
+test('creates a private encrypted site bucket', () => {
+  const app = new cdk.App();
+  const stack = new StaticSiteStack(app, 'TestStaticSiteStack');
+  const template = Template.fromStack(stack);
 
-//   template.hasResourceProperties('AWS::SQS::Queue', {
-//     VisibilityTimeout: 300
-//   });
+  template.hasResourceProperties('AWS::S3::Bucket', {
+    BucketEncryption: {
+      ServerSideEncryptionConfiguration: Match.arrayWith([
+        Match.objectLike({
+          ServerSideEncryptionByDefault: { SSEAlgorithm: 'AES256' },
+        }),
+      ]),
+    },
+    PublicAccessBlockConfiguration: {
+      BlockPublicAcls: true,
+      BlockPublicPolicy: true,
+      IgnorePublicAcls: true,
+      RestrictPublicBuckets: true,
+    },
+  });
+});
+
+test('deploys through HTTPS CloudFront and invalidates the CDN cache', () => {
+  const app = new cdk.App();
+  const stack = new StaticSiteStack(app, 'TestStaticSiteStack');
+  const template = Template.fromStack(stack);
+
+  template.hasResourceProperties('AWS::CloudFront::Distribution', {
+    DistributionConfig: Match.objectLike({
+      DefaultRootObject: 'index.html',
+      DefaultCacheBehavior: Match.objectLike({
+        ViewerProtocolPolicy: 'redirect-to-https',
+      }),
+    }),
+  });
+  template.hasResourceProperties('Custom::CDKBucketDeployment', {
+    DistributionPaths: ['/*'],
+  });
 });
