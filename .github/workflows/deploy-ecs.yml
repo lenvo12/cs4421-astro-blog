@@ -1,15 +1,19 @@
-name: Deploy static site
+name: Deploy ECS service
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Existing image tag to deploy from the astro-blog ECR repository
+        required: true
+        type: string
+        default: v1.0.1
 
 permissions:
   contents: read
 
 concurrency:
-  group: static-site-production
+  group: ecs-service-deployment
   cancel-in-progress: false
 
 jobs:
@@ -24,15 +28,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            cdk/package-lock.json
-
-      - name: Install Astro dependencies
-        run: npm ci
-
-      - name: Build Astro site
-        run: npm run build
+          cache-dependency-path: cdk/package-lock.json
 
       - name: Install CDK dependencies
         run: npm ci
@@ -45,6 +41,13 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Deploy site
-        run: npx cdk deploy --require-approval never
+      - name: Deploy ECS service
+        env:
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          if [[ ! "$IMAGE_TAG" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]]; then
+            echo "Invalid ECR image tag: $IMAGE_TAG" >&2
+            exit 1
+          fi
+          npx cdk deploy EcsStack --parameters "EcsStack:ImageTag=$IMAGE_TAG" --require-approval never
         working-directory: cdk
