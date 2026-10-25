@@ -3,6 +3,8 @@ import BaseHead from '../components/BaseHead.astro';
 import Footer from '../components/Footer.astro';
 import Header from '../components/Header.astro';
 import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+
+const isDeveloper = Astro.locals.isDeveloper;
 ---
 
 <!doctype html>
@@ -11,39 +13,230 @@ import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
 		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
 	</head>
 	<body>
-		<Header />
-		<main>
-			<h1>🧑‍🚀 Hello, Astronaut!</h1>
-			<p>
-				Welcome to the official <a href="https://astro.build/">Astro</a> blog starter template. This template
-				serves as a lightweight, minimally-styled starting point for anyone looking to build a personal
-				website, blog, or portfolio with Astro.
-			</p>
-			<p>
-				This template comes with a few integrations already configured in your
-				<code>astro.config.mjs</code> file. You can customize your setup with
-				<a href="https://astro.build/integrations">Astro Integrations</a> to add tools like Tailwind,
-				React, or Vue to your project.
-			</p>
-			<p>Here are a few ideas on how to get started with the template:</p>
-			<ul>
-				<li>Edit this page in <code>src/pages/index.astro</code></li>
-				<li>Edit the site header items in <code>src/components/Header.astro</code></li>
-				<li>Add your name to the footer in <code>src/components/Footer.astro</code></li>
-				<li>Check out the included blog posts in <code>src/content/blog/</code></li>
-				<li>Customize the blog post page layout in <code>src/layouts/BlogPost.astro</code></li>
-			</ul>
-			<p>
-				Have fun! If you get stuck, remember to
-				<a href="https://docs.astro.build/">read the docs</a>
-				or <a href="https://astro.build/chat">join us on Discord</a> to ask questions.
-			</p>
-			<p>
-				Looking for a blog template with a bit more personality? Check out
-				<a href="https://github.com/Charca/astro-blog-template">astro-blog-template</a>
-				by <a href="https://twitter.com/Charca">Maxi Ferreira</a>.
-			</p>
-		</main>
-		<Footer />
+		<div class="site-shell" id="site-shell" data-sky="day" data-weather="clear">
+			<Header />
+			<main class="game-home">
+				<section class="intro story-banner" aria-labelledby="hero-title">
+					<div class="banner-scene" aria-hidden="true">
+						<span class="banner-aurora"></span>
+						<span class="banner-cloud banner-cloud--one"></span>
+						<span class="banner-cloud banner-cloud--two"></span>
+						<img class="banner-landscape" src="/game/mountain-landscape.webp" alt="" />
+						<img class="banner-pip" src="/game/pip-jump.png" alt="" />
+						<img class="banner-fish" src="/game/fish.png" alt="" />
+					</div>
+					<div class="intro-copy">
+						<p class="eyebrow banner-kicker">READY FOR TAKEOFF</p>
+						<h1 id="hero-title">Above the clouds</h1>
+						<p class="intro-text">
+							Meet Pip. The penguin who never stops bouncing. Steer through the clouds, find your
+							next platform, and see how high this little explorer can go. Will you be the first
+							to reach the top?
+						</p>
+						<a class="text-link" href="#how-to-play">How to play <span aria-hidden="true">↓</span></a>
+					</div>
+				</section>
+
+				<section class="flight-setup" aria-label="Flight setup">
+					<form class="pilot-form" id="pilot-form">
+						<label id="pilot-name-label" for="pilot-name">Your name</label>
+						<div class="pilot-name-control">
+							<input id="pilot-name" name="pilot-name" type="text" autocomplete="nickname" maxlength="24" placeholder="e.g. CloudSkater" />
+							<button class="pilot-save-button" id="pilot-save-button" type="submit">Save</button>
+						</div>
+					</form>
+					<div class="weather-settings">
+						<label class="weather-toggle" for="weather-consent">
+							<input id="weather-consent" type="checkbox" role="switch" />
+							<span class="weather-toggle-copy">
+								<span>Use local weather</span>
+								<span class="weather-loading" id="weather-loading" role="status" aria-live="polite" aria-atomic="true" hidden>
+									<span class="weather-loading-track" aria-hidden="true"><span></span></span>
+									<span class="visually-hidden">Checking local weather…</span>
+								</span>
+							</span>
+						</label>
+						<div class="local-conditions" id="local-conditions">
+							<span id="local-conditions-value" aria-atomic="true"></span>
+						</div>
+						<button
+							class="weather-info-toggle"
+							id="weather-info-toggle"
+							type="button"
+							aria-label="About local weather"
+							aria-expanded="false"
+							aria-controls="weather-info"
+						>i</button>
+						<section class="weather-info" id="weather-info" aria-labelledby="weather-info-title" hidden>
+							<h2 id="weather-info-title">What happens when you opt in?</h2>
+							<p>Your browser may ask permission to use your location. If you allow it, this page rounds your coordinates to about 1 km and sends them to Open-Meteo to get current weather and sunrise/sunset times, so Pip’s sky matches your area. This game does not store your coordinates. If you decline or weather is unavailable, Pip uses clear skies and your device time instead.</p>
+							<p>Your callsign lasts for this tab. Scores and your theme choice stay in this browser; your name and scores are not uploaded to a server.</p>
+							<a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Learn about Open-Meteo</a>
+							<button class="weather-info-close" id="weather-info-close" type="button">Close</button>
+						</section>
+						<div class="flight-setup-status">
+							<p class="weather-status" id="weather-status" role="status" aria-live="polite"></p>
+							<p class="storage-note" id="storage-note" role="status" aria-live="polite" hidden></p>
+						</div>
+					</div>
+				</section>
+
+				<section class="play-layout" id="play" aria-label="Penguin game">
+					<div class="game-card">
+						<div class="game-stage">
+							<canvas id="game-canvas" aria-label="A penguin jumping between floating platforms"></canvas>
+							<div class="score-pill" aria-live="polite">
+								<span>HEIGHT</span>
+								<strong><span id="score-value">0</span><small> m</small></strong>
+							</div>
+							<div class="altitude-meter" role="meter" aria-label="Course altitude" aria-valuemin="0" aria-valuemax="10000" aria-valuenow="0">
+								<span class="altitude-meter-limit">10 km</span>
+								<div class="altitude-meter-scale">
+									<div class="altitude-meter-track">
+										<div class="altitude-meter-fill" id="altitude-meter-fill"></div>
+									</div>
+									<div class="altitude-record-marker altitude-record-marker--personal" id="personal-best-marker" role="img" aria-label="Personal best marker" hidden>
+										<span id="personal-best-marker-label"></span>
+									</div>
+									<div class="altitude-record-marker altitude-record-marker--leaderboard" id="leaderboard-max-marker" role="img" aria-label="Leaderboard maximum marker" hidden>
+										<span id="leaderboard-max-marker-label"></span>
+									</div>
+								</div>
+							</div>
+							<section class="summit-victory" id="summit-victory" hidden aria-labelledby="summit-victory-title" aria-live="polite">
+								<p class="summit-victory-kicker">COURSE COMPLETE</p>
+								<h3 id="summit-victory-title">10,000 m summit</h3>
+								<p id="summit-victory-copy">Pip made it to the top. Slide left and right to explore, or start a new climb when you’re ready.</p>
+								<div class="summit-victory-actions">
+									<button class="summit-restart" id="summit-restart" type="button">Start a new climb</button>
+									<button class="summit-dismiss" id="summit-dismiss" type="button">Stay at summit</button>
+								</div>
+							</section>
+						</div>
+
+						<div class="game-controls">
+							<div class="direction-controls" aria-label="Movement controls">
+								<button class="direction-button" id="move-left" type="button" aria-label="Move left">←</button>
+								<button class="direction-button" id="move-right" type="button" aria-label="Move right">→</button>
+								<span class="keyboard-hint">OR USE A / D</span>
+							</div>
+							<div class="current-zone" id="current-zone" aria-live="polite">Earth's Atmosphere</div>
+							{isDeveloper && (
+								<div class="zone-test-picker">
+									<label for="zone-selector">TEST ZONE</label>
+									<select id="zone-selector">
+										<option value="0">Earth's Atmosphere</option>
+										<option value="1">The Moon</option>
+										<option value="2">Mars</option>
+										<option value="3">Jupiter</option>
+										<option value="4">Saturn</option>
+										<option value="5">Uranus</option>
+										<option value="6">Neptune</option>
+										<option value="7">Kuiper Belt</option>
+										<option value="8">Oort Cloud</option>
+										<option value="9">Interstellar Space</option>
+									</select>
+								</div>
+							)}
+							<button class="play-button" id="play-button" type="button">
+								<span class="play-icon" aria-hidden="true">▶</span>
+								<span id="play-label">Start a climb</span>
+							</button>
+						</div>
+						{isDeveloper && (
+							<>
+								<div class="developer-toolbar">
+									<label class="developer-mode-control" for="developer-mode">
+										<input id="developer-mode" type="checkbox" />
+										<span><strong>Developer mode</strong><small>Hide Pip and scroll the full course preview</small></span>
+									</label>
+									<form action="/api/developer-session" method="post">
+										<input type="hidden" name="action" value="logout" />
+										<button class="developer-logout" type="submit">Sign out</button>
+									</form>
+								</div>
+								<section class="zone-test-controls" aria-label="Temporary zone test controls">
+									<div class="zone-test-action">
+										<p id="zone-readout" aria-live="polite">Earth's Atmosphere · selected altitude 0 m</p>
+										<button id="test-flight-button" type="button">Start test flight here</button>
+									</div>
+									<p class="zone-test-note">Choose a zone and launch Pip there. Test flights do not affect saved scores.</p>
+								</section>
+							</>
+						)}
+						<p class="visually-hidden" id="game-message" role="status" aria-live="polite"></p>
+					</div>
+					<aside class="side-column">
+						<section class="panel leaderboard-panel" id="leaderboard" aria-labelledby="leaderboard-title">
+							<div class="leaderboard-heading">
+								<h2 id="leaderboard-title">Leaderboard</h2>
+								<span class="leaderboard-badge">TOP 100</span>
+							</div>
+							<ol class="leaderboard-list" id="leaderboard-list" tabindex="0" aria-label="Top 100 scores"></ol>
+						</section>
+					</aside>
+				</section>
+				{isDeveloper && (
+					<section class="environment-controls" aria-label="Weather and time preview">
+						<div>
+							<p class="card-kicker">PREVIEW THE SKY</p>
+							<p id="environment-description">Choose a weather preset or time to preview Pip’s environment.</p>
+						</div>
+						<div class="weather-presets" id="weather-presets" role="group" aria-label="Weather presets">
+							<button type="button" data-weather="clear">Clear</button>
+							<button type="button" data-weather="cloud">Cloudy</button>
+							<button type="button" data-weather="fog">Fog</button>
+							<button type="button" data-weather="drizzle">Drizzle</button>
+							<button type="button" data-weather="freezing-drizzle">Freezing drizzle</button>
+							<button type="button" data-weather="rain">Rain</button>
+							<button type="button" data-weather="freezing-rain">Freezing rain</button>
+							<button type="button" data-weather="snow">Snow</button>
+							<button type="button" data-weather="snow-grains">Snow grains</button>
+							<button type="button" data-weather="rain-showers">Rain showers</button>
+							<button type="button" data-weather="snow-showers">Snow showers</button>
+							<button type="button" data-weather="thunderstorm">Thunderstorm</button>
+							<button type="button" data-weather="hail">Thunderstorm + hail</button>
+						</div>
+						<label class="time-preview" for="time-preview">
+							<span>TIME OF DAY</span>
+							<input id="time-preview" type="range" min="0" max="1439" step="15" value="720" />
+							<output id="time-preview-label" for="time-preview">12:00</output>
+						</label>
+					</section>
+				)}
+
+				<section class="how-to" id="how-to-play" aria-labelledby="how-to-title">
+					<div class="how-to-heading">
+						<p class="card-kicker">NEW TO THE CLIMB?</p>
+						<h2 id="how-to-title">How to help <span>Pip climb</span></h2>
+					</div>
+					<div class="steps">
+						<article class="step-card">
+							<span class="step-number">01</span>
+							<h3>Pick your callsign</h3>
+							<p>Choose the name you want beside your highest climb.</p>
+						</article>
+						<article class="step-card">
+							<span class="step-number">02</span>
+							<h3>Steer Pip</h3>
+							<p>Use A and D, arrow keys, or the on-screen buttons to drift.</p>
+						</article>
+						<article class="step-card">
+							<span class="step-number">03</span>
+							<h3>Keep the climb going</h3>
+							<p>
+								Pip bounces automatically. Land on a ledge to continue. If no platform is within
+								reach, a free rescue fish appears; after a fall, the recovery arm has a 20% chance
+								to catch him.
+							</p>
+						</article>
+					</div>
+				</section>
+			</main>
+			<Footer />
+		</div>
+		<script>
+			import '../scripts/penguin-game';
+		</script>
 	</body>
 </html>

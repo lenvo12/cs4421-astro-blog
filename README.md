@@ -1,62 +1,49 @@
-# Astro Starter Kit: Blog
+# Pip's Ascension
 
-```sh
-npm create astro@latest -- --template blog
-```
+Pip's Ascension is a browser-based penguin jumping game built with Astro. Help Pip steer between floating platforms, collect fish, and climb toward the summit.
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+## Project structure
 
-Features:
-
-- ✅ Minimal styling (make it your own!)
-- ✅ 100/100 Lighthouse performance
-- ✅ SEO-friendly with canonical URLs and Open Graph data
-- ✅ Sitemap support
-- ✅ RSS Feed support
-- ✅ Markdown & MDX support
-
-## 🚀 Project Structure
-
-Inside of your Astro project, you'll see the following folders and files:
+The site pages and shared components live under `src/`; game artwork and other static assets live in `public/`.
 
 ```text
 ├── public/
 ├── src/
-│   ├── assets/
-│   ├── components/
-│   ├── content/
-│   ├── layouts/
-│   └── pages/
+│   ├── components/
+│   ├── pages/
+│   ├── scripts/
+│   └── styles/
 ├── astro.config.mjs
 ├── README.md
 ├── package.json
 └── tsconfig.json
 ```
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+## Commands
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
-
-The `src/content/` directory contains "collections" of related Markdown and MDX documents. Use `getCollection()` to retrieve posts from `src/content/blog/`, and type-check your frontmatter using an optional schema. See [Astro's Content Collections docs](https://docs.astro.build/en/guides/content-collections/) to learn more.
-
-Any static assets, like images, can be placed in the `public/` directory.
-
-## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
+Run these commands from the project root:
 
 | Command                   | Action                                           |
 | :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
+| `npm install`             | Install dependencies                             |
+| `npm run dev`             | Start the local site at `localhost:4321`         |
+| `npm run test:unit`       | Run game-physics unit tests                      |
+| `npm run check`           | Check Astro pages and TypeScript                 |
+| `npm run lint`            | Run ESLint                                       |
+| `npm run build`           | Build the production site to `./dist/`           |
+| `npm run preview`         | Preview the production build locally             |
 
-## 👀 Want to learn more?
+## Owner-only developer tools
 
-Check out [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+The public game hides developer mode, zone test flights, and weather/time preview controls. On a Node.js server deployment, use the small dot at the end of the footer to open the password form.
+
+Configure `DEVELOPER_ACCESS_PASSWORD` with a 16–256 character password and `DEVELOPER_ACCESS_SECRET` with at least 32 random bytes in the **server runtime environment**. For local development, put these variables in the ignored `.env` file. For example, generate the session secret with:
+
+```sh
+node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"
+```
+
+The signed, HTTP-only developer session lasts 12 hours. Do not put either value in client-side code or commit them. This feature requires the Astro Node adapter; a static S3 deployment cannot validate the password or protect the developer controls. Since the game itself runs in the visitor’s browser, this gate hides the tools from regular visitors but cannot prevent a determined user from modifying their local client.
 
 ## Credit
 
