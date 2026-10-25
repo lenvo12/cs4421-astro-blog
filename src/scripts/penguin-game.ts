@@ -41,7 +41,6 @@ import {
 	getDaylightFactor,
 	parseClockTime,
 	shortestTimeDelta,
-	WEATHER_KINDS,
 	type WeatherKind,
 } from './environment-weather';
 import {
@@ -238,9 +237,6 @@ const weatherInfoClose = requiredElement(
 	document.querySelector<HTMLButtonElement>('#weather-info-close'),
 	'#weather-info-close',
 );
-const environmentDescription = document.querySelector<HTMLElement>('#environment-description');
-const timePreview = document.querySelector<HTMLInputElement>('#time-preview');
-const timePreviewLabel = document.querySelector<HTMLOutputElement>('#time-preview-label');
 const altitudeMeterFill = requiredElement(
 	document.querySelector<HTMLElement>('#altitude-meter-fill'),
 	'#altitude-meter-fill',
@@ -248,10 +244,6 @@ const altitudeMeterFill = requiredElement(
 const altitudeMeter = requiredElement(
 	document.querySelector<HTMLElement>('.altitude-meter'),
 	'.altitude-meter',
-);
-const altitudeMeterTrack = requiredElement(
-	document.querySelector<HTMLElement>('.altitude-meter-track'),
-	'.altitude-meter-track',
 );
 const personalBestMarker = requiredElement(
 	document.querySelector<HTMLElement>('#personal-best-marker'),
@@ -296,11 +288,6 @@ const leaderboardList = requiredElement(
 );
 const leftButton = requiredElement(document.querySelector<HTMLButtonElement>('#move-left'), '#move-left');
 const rightButton = requiredElement(document.querySelector<HTMLButtonElement>('#move-right'), '#move-right');
-const zoneSelector = document.querySelector<HTMLSelectElement>('#zone-selector');
-const zoneReadout = document.querySelector<HTMLElement>('#zone-readout');
-const testFlightButton = document.querySelector<HTMLButtonElement>('#test-flight-button');
-const developerModeToggle = document.querySelector<HTMLInputElement>('#developer-mode');
-const weatherButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-weather]'));
 
 const context: CanvasRenderingContext2D = canvas.getContext('2d') ?? (() => {
 	throw new Error('The game needs a browser with canvas support.');
@@ -352,12 +339,9 @@ let weatherLoadSequence = 0;
 let weatherRequestController: AbortController | null = null;
 let weatherCloudCover = 0;
 let targetWeatherCloudCover = 0;
-let weatherPreviewInteracted = false;
-let timePreviewInteracted = false;
 let weatherWeightsFrom = createWeatherWeights('clear');
 let weatherWeightsTo = createWeatherWeights('clear');
 let weatherTransitionProgress = 1;
-let selectedTestAltitude = 0;
 let platforms: Platform[] = [];
 let backgroundElements: BackgroundElement[] = [];
 let ambientElements: AmbientElement[] = [];
@@ -403,11 +387,6 @@ let backgroundStageIndex = 0;
 let coneOffset = 0;
 let coneVelocity = 0;
 let coneDetached = false;
-let coursePreviewOffset = 0;
-let coursePreviewTargetOffset = 0;
-let testFlightAltitude: number | null = null;
-let developerMode = false;
-let elevationDragPointerId: number | null = null;
 
 const COURSE_PREVIEW_LAYERS = Math.ceil(COURSE_MAX_ALTITUDE / 100) + 2;
 const BOOST_DECELERATION = 560;
@@ -766,17 +745,11 @@ function daylightFactor(): number {
 function updateEnvironment(): void {
 	shell.dataset.sky = isDaytime() ? 'day' : 'night';
 	shell.dataset.weather = weatherKind;
-	if (timePreview) timePreview.value = `${targetEnvironmentTimeMinutes}`;
-	if (timePreviewLabel) timePreviewLabel.value = formatClockTime(targetEnvironmentTimeMinutes);
 	updateLocalConditions();
 	if (width > 0 && height > 0) drawScene();
 }
 
-function updateEnvironmentDescription(description: string): void {
-	if (environmentDescription) environmentDescription.textContent = description;
-}
-
-function setWeatherKind(kind: WeatherKind, description?: string, immediate = false): void {
+function setWeatherKind(kind: WeatherKind, immediate = false): void {
 	const currentWeights = getWeatherWeights();
 	const alreadyShowingKind = weatherKind === kind &&
 		Math.abs((currentWeights.get(kind) ?? 0) - 1) < 0.001;
@@ -809,12 +782,6 @@ function setWeatherKind(kind: WeatherKind, description?: string, immediate = fal
 			thunderstorm: 98,
 			hail: 98,
 		}[kind];
-	}
-	updateEnvironmentDescription(
-		description ?? `${weatherLabelForKind(kind)} · ${formatClockTime(targetEnvironmentTimeMinutes)}`,
-	);
-	for (const button of weatherButtons) {
-		button.setAttribute('aria-pressed', `${button.dataset.weather === kind}`);
 	}
 	if (width > 0 && height > 0) drawScene();
 }
@@ -857,10 +824,6 @@ function advanceEnvironmentTransitions(delta: number): void {
 	shell.dataset.weather = weatherKind;
 }
 
-function isWeatherKind(value: string | undefined): value is WeatherKind {
-	return value !== undefined && WEATHER_KINDS.some((kind) => kind === value);
-}
-
 function weatherWeight(kind: WeatherKind): number {
 	return activeWeatherWeights.get(kind) ?? 0;
 }
@@ -871,9 +834,9 @@ function combinedWeatherWeight(kinds: WeatherKind[]): number {
 
 function weatherLabelForKind(kind: WeatherKind): string {
 	const labels: Record<WeatherKind, string> = {
-		clear: 'Clear skies',
-		cloud: 'Cloudy skies',
-		fog: 'Foggy',
+		clear: 'Clear',
+		cloud: 'Cloudy',
+		fog: 'Fog',
 		drizzle: 'Drizzle',
 		'freezing-drizzle': 'Freezing drizzle',
 		rain: 'Rain',
@@ -883,7 +846,7 @@ function weatherLabelForKind(kind: WeatherKind): string {
 		'rain-showers': 'Rain showers',
 		'snow-showers': 'Snow showers',
 		thunderstorm: 'Thunderstorm',
-		hail: 'Thunderstorm with hail',
+		hail: 'Storm + hail',
 	};
 	return labels[kind];
 }
@@ -892,15 +855,14 @@ function updateLocalConditions(): void {
 	const weather = weatherLabelForKind(weatherKind);
 	const now = new Date();
 	const time = formatClockTime(now.getHours() * 60 + now.getMinutes());
-	const shortWeather = weather === 'Clear skies' ? 'clear' : weather.toLowerCase();
 	const conditions = weatherRequestState === 'locating'
 		? 'Finding location…'
 		: weatherRequestState === 'forecast'
 			? 'Getting weather…'
 			: weatherRequestState === 'active' && localWeatherObservation
-				? `Local ${shortWeather} · ${time}`
+				? `${weather} · ${time}`
 				: weatherRequestState === 'fallback'
-					? `Fallback clear · ${time}`
+					? `Clear · ${time}`
 					: `${weather} · ${time}`;
 	localConditionsValue.textContent = conditions;
 	localConditions.title = weatherRequestState === 'active' && localWeatherObservation
@@ -918,35 +880,20 @@ function updateLocalConditions(): void {
 }
 
 function setLocalFallback(): void {
-	environmentTimeMinutes = 12 * 60;
-	targetEnvironmentTimeMinutes = environmentTimeMinutes;
-	sunriseMinutes = targetSunriseMinutes = 6 * 60;
-	sunsetMinutes = targetSunsetMinutes = 18 * 60;
-	solarOverrideBlend = targetSolarOverrideBlend = 0;
-	solarOverrideDaylight = targetSolarOverrideDaylight = 0;
-	weatherCloudCover = targetWeatherCloudCover = 0;
-	weatherPreviewInteracted = false;
-	timePreviewInteracted = false;
-	weatherWeightsFrom = weatherWeightsTo = createWeatherWeights('clear');
-	weatherTransitionProgress = 1;
-	for (const kind of WEATHER_KINDS) activeWeatherWeights.set(kind, kind === 'clear' ? 1 : 0);
-	locationWeatherLoaded = false;
 	localWeatherObservation = null;
 	weatherRequestState = 'idle';
 	weatherStatus.textContent = '';
-	updateEnvironment();
-	setWeatherKind('clear', 'Preview starts at noon. Opt in to use your local weather and daylight.');
+	setDeviceTimeFallback(true);
+	setWeatherKind('clear', true);
 }
 
 function setDeviceTimeFallback(immediate = false): void {
 	const now = new Date();
-	if (!timePreviewInteracted) {
-		targetEnvironmentTimeMinutes = now.getHours() * 60 + now.getMinutes();
-	}
+	targetEnvironmentTimeMinutes = now.getHours() * 60 + now.getMinutes();
 	targetSunriseMinutes = 6 * 60;
 	targetSunsetMinutes = 18 * 60;
 	targetSolarOverrideBlend = 0;
-	if (!weatherPreviewInteracted) targetWeatherCloudCover = 0;
+	targetWeatherCloudCover = 0;
 	if (immediate) {
 		environmentTimeMinutes = targetEnvironmentTimeMinutes;
 		sunriseMinutes = targetSunriseMinutes;
@@ -1017,27 +964,12 @@ async function loadLocalWeather(immediate: boolean, requestSequence: number): Pr
 			parsedSunrise === parsedSunset;
 		targetSolarOverrideBlend = polarDay ? 1 : 0;
 		targetSolarOverrideDaylight = observation.isDay ? 1 : 0;
-		if (!timePreviewInteracted) {
-			targetEnvironmentTimeMinutes =
-				parseClockTime(observation.observedAt.split('T')[1] ?? '') ??
-				new Date().getHours() * 60 + new Date().getMinutes();
-		}
+		targetEnvironmentTimeMinutes =
+			parseClockTime(observation.observedAt.split('T')[1] ?? '') ??
+			new Date().getHours() * 60 + new Date().getMinutes();
 		targetWeatherCloudCover = observation.cloudCoverPercent;
 		weatherStatus.textContent = '';
-		if (!weatherPreviewInteracted) {
-			setWeatherKind(
-				observation.kind,
-				`${observation.label} · ${Math.round(observation.temperatureCelsius)}°C · ` +
-					`${Math.round(observation.cloudCoverPercent)}% cloud cover · ` +
-					`${observation.precipitationMillimeters.toFixed(1)} mm precipitation · ` +
-					'approximate location',
-				immediate,
-			);
-		} else {
-			updateEnvironmentDescription(
-				`${weatherLabelForKind(weatherKind)} · ${formatClockTime(targetEnvironmentTimeMinutes)} · local daylight cycle`,
-			);
-		}
+		setWeatherKind(observation.kind, immediate);
 		if (immediate) {
 			environmentTimeMinutes = targetEnvironmentTimeMinutes;
 			sunriseMinutes = targetSunriseMinutes;
@@ -1057,10 +989,9 @@ async function loadLocalWeather(immediate: boolean, requestSequence: number): Pr
 		locationWeatherLoaded = false;
 		weatherRequestState = 'fallback';
 		setDeviceTimeFallback(immediate);
-		if (!weatherPreviewInteracted) setWeatherKind('clear', undefined, immediate);
+		setWeatherKind('clear', immediate);
 		weatherStatus.textContent = weatherFailureMessage(error);
 		localConditions.title = weatherStatus.textContent;
-		updateEnvironmentDescription(weatherStatus.textContent);
 		updateLocalConditions();
 		return false;
 	} finally {
@@ -3012,7 +2943,7 @@ function drawBackground(sceneAltitude: number): void {
 	}
 
 	drawGroundGrass(sceneAltitude);
-	const displayedAltitude = mode === 'playing' || mode === 'won' ? altitude : coursePreviewOffset;
+	const displayedAltitude = mode === 'playing' || mode === 'won' ? altitude : 0;
 	const displayedMeters = mode === 'won'
 		? COURSE_MAX_METERS
 		: mode === 'playing'
@@ -4260,14 +4191,14 @@ function summitImageBounds(platform: Platform): { x: number; y: number; width: n
 	};
 }
 
-function drawSummitFish(previewOffset = 0): void {
+function drawSummitFish(): void {
 	const fishSprite = penguinSprites.fish;
 	if (!fishSprite.complete || fishSprite.naturalWidth === 0) return;
 	const fishWidth = Math.min(24, Math.max(17, width * 0.035));
 	const fishHeight = fishWidth * fishSprite.naturalHeight / fishSprite.naturalWidth;
 	for (const fish of summitFish) {
 		const x = fish.platform.x + fish.offsetX;
-		const y = fish.platform.y + previewOffset + fish.offsetY +
+		const y = fish.platform.y + fish.offsetY +
 			Math.sin(elapsedTime * 3 + fish.phase) * 1.5;
 		context.save();
 		context.shadowColor = 'rgba(255, 232, 147, 0.9)';
@@ -4328,7 +4259,7 @@ function drawPlatformPiece(platform: Platform): void {
 		height -
 		GROUND_SURFACE -
 		platform.y +
-		(mode === 'playing' || mode === 'won' ? altitude : coursePreviewOffset);
+		(mode === 'playing' || mode === 'won' ? altitude : 0);
 	const stageIndex = getCourseStageIndex(platformAltitude);
 	const stage = COURSE_STAGES[stageIndex];
 	const topColor = stageIndex === 0
@@ -4474,10 +4405,10 @@ function drawPlatformPiece(platform: Platform): void {
 	context.restore();
 }
 
-function drawBoostPickup(pickup: BoostPickup, previewOffset = 0): void {
+function drawBoostPickup(pickup: BoostPickup): void {
 	const bob = Math.sin(elapsedTime * 4 + pickup.phase) * 4;
 	const x = pickup.x;
-	const y = pickup.y + previewOffset + bob;
+	const y = pickup.y + bob;
 	const fish = penguinSprites.fish;
 	if (!fish.complete || fish.naturalWidth === 0) return;
 	const fishScale = pickup.size * 0.42;
@@ -4542,35 +4473,32 @@ function resetConeOnHead(): void {
 
 function drawScene(): void {
 	const isInRun = mode === 'playing' || mode === 'won';
-	const previewOffset = isInRun ? 0 : coursePreviewOffset;
-	const sceneAltitude = isInRun ? altitude : coursePreviewOffset;
+	const sceneAltitude = isInRun ? altitude : 0;
 	drawBackground(sceneAltitude);
 	for (const platform of platforms) {
 		if (!platform.summit) continue;
-		const previewPlatform = previewOffset === 0 ? platform : { ...platform, y: platform.y + previewOffset };
-		const bounds = summitImageBounds(previewPlatform);
+		const bounds = summitImageBounds(platform);
 		if (bounds.y < height + 70 && bounds.y + bounds.height > -50) {
-			drawSummitPlatform(previewPlatform);
-			drawSummitSnow(previewPlatform);
+			drawSummitPlatform(platform);
+			drawSummitSnow(platform);
 		}
 	}
-	drawSummitFish(previewOffset);
+	drawSummitFish();
 	drawSummitHearts();
 	for (const pickup of boostPickups) {
 		const pickupAltitude =
 			height - GROUND_SURFACE - pickup.platform.y + sceneAltitude - pickup.offsetY;
-		if (boostsAllowedAtAltitude(pickupAltitude)) drawBoostPickup(pickup, previewOffset);
+		if (boostsAllowedAtAltitude(pickupAltitude)) drawBoostPickup(pickup);
 	}
 	for (const platform of platforms) {
 		if (platform.summit) continue;
-		const previewPlatform = previewOffset === 0 ? platform : { ...platform, y: platform.y + previewOffset };
-		if (previewPlatform.y < height + 70 && previewPlatform.y + 60 > -50) drawPlatform(previewPlatform);
+		if (platform.y < height + 70 && platform.y + 60 > -50) drawPlatform(platform);
 	}
 	drawDebrisHazard(sceneAltitude);
-	if (mode === 'playing') drawRescueLine(0);
-	drawPersonalBestMarker(previewOffset);
+	if (mode === 'playing') drawRescueLine();
+	drawPersonalBestMarker();
 	if (mode === 'playing') drawRecoveryArm();
-	if (!developerMode && mode !== 'over' && (isInRun || previewOffset === 0)) drawPenguin();
+	if (mode !== 'over') drawPenguin();
 	if (mode === 'won') drawSummitParticles();
 }
 
@@ -4580,7 +4508,7 @@ interface RecordMarker {
 	preferredX: number;
 }
 
-function drawPersonalBestMarker(previewOffset: number): void {
+function drawPersonalBestMarker(): void {
 	const personalMarker: RecordMarker = {
 		score: personalBestScore,
 		color: '#e63d4d',
@@ -4600,18 +4528,18 @@ function drawPersonalBestMarker(previewOffset: number): void {
 	const shareBestIsland =
 		personalMarker.score > 0 && personalMarker.score === overallMarker.score;
 	if (shareBestIsland) {
-		const platform = findNearestPlatformAtAltitude(personalMarker.score * 10, false);
+		const platform = findNearestPlatformAtAltitude(personalMarker.score * 10);
 		if (platform) groups.push({ platform, markers: [personalMarker, overallMarker] });
 	} else {
 		for (const marker of markers) {
-			const platform = findNearestPlatformAtAltitude(marker.score * 10, false);
+			const platform = findNearestPlatformAtAltitude(marker.score * 10);
 			if (platform) groups.push({ platform, markers: [marker] });
 		}
 	}
 
 	const usedMarkers: Array<{ x: number; y: number }> = [];
 	for (const group of groups) {
-		const islandY = group.platform.y + previewOffset;
+		const islandY = group.platform.y;
 		if (islandY < -45 || islandY > height + 45) continue;
 		if (group.platform.summit) {
 			const centerX = group.platform.x + group.platform.width / 2;
@@ -4636,7 +4564,6 @@ function drawPersonalBestMarker(previewOffset: number): void {
 		const centerX = findMarkerIslandX(
 			group.markers[0].preferredX,
 			islandY,
-			previewOffset,
 			usedMarkers,
 			group.markers.length > 1,
 		);
@@ -4754,7 +4681,6 @@ function drawMarkerFlag(poleX: number, islandY: number, color: string): void {
 function findMarkerIslandX(
 	preferredX: number,
 	islandY: number,
-	previewOffset: number,
 	usedMarkers: Array<{ x: number; y: number }>,
 	wide = false,
 ): number | null {
@@ -4766,7 +4692,7 @@ function findMarkerIslandX(
 	candidates.sort((first, second) => Math.abs(first - preferredX) - Math.abs(second - preferredX));
 	for (const centerX of candidates) {
 		const overlapsPlatform = platforms.some((platform) => {
-			const platformY = platform.y + previewOffset;
+			const platformY = platform.y;
 			const horizontalOverlap =
 				centerX + islandHalfWidth > platform.x &&
 				centerX - islandHalfWidth < platform.x + platform.width;
@@ -4824,17 +4750,11 @@ function platformAltitude(platform: Platform): number {
 	return Math.max(0, height - GROUND_SURFACE - platform.y + cameraOffset);
 }
 
-function findNearestPlatformAtAltitude(targetAltitude: number, safeOnly: boolean): Platform | null {
+function findNearestPlatformAtAltitude(targetAltitude: number): Platform | null {
 	let nearest: Platform | null = null;
 	let nearestDistance = Number.POSITIVE_INFINITY;
 	for (const platform of platforms) {
 		if (platform.falling || (platform.nebula && (platform.opacity ?? 1) < 0.98)) continue;
-		if (
-			safeOnly &&
-			(platform.cracked || platform.nebula || platform.slingshot)
-		) {
-			continue;
-		}
 		const distance = Math.abs(platformAltitude(platform) - targetAltitude);
 		if (distance < nearestDistance) {
 			nearest = platform;
@@ -4842,81 +4762,6 @@ function findNearestPlatformAtAltitude(targetAltitude: number, safeOnly: boolean
 		}
 	}
 	return nearest;
-}
-
-function findNearestSafePlatform(targetAltitude: number): Platform | null {
-	return findNearestPlatformAtAltitude(targetAltitude, true);
-}
-
-function startPreviewFlight(): void {
-	const selectedPlatform = findNearestSafePlatform(coursePreviewOffset);
-	if (!selectedPlatform) {
-		throw new Error('Developer mode has no safe platform from which to resume the game.');
-	}
-
-	const startAltitude = platformAltitude(selectedPlatform);
-	const platformAltitudes = new Map(platforms.map((platform) => [
-		platform,
-		platformAltitude(platform),
-	]));
-	const retainedPlatforms = platforms.filter((platform) => {
-		const worldAltitude = platformAltitudes.get(platform);
-		return worldAltitude !== undefined && worldAltitude >= startAltitude;
-	});
-	if (!retainedPlatforms.includes(selectedPlatform)) {
-		throw new Error('The selected developer-mode platform is missing from the course.');
-	}
-
-	const retainedSet = new Set(retainedPlatforms);
-	platforms = retainedPlatforms;
-	for (const platform of platforms) platform.y += startAltitude;
-	boostPickups = boostPickups.filter((pickup) => retainedSet.has(pickup.platform));
-	syncBoostPickups();
-
-	developerMode = false;
-	if (developerModeToggle) developerModeToggle.checked = false;
-	syncAltitudeMeterInteraction();
-	mode = 'playing';
-	updatePilotFormAvailability();
-	testFlightAltitude = null;
-	altitude = startAltitude;
-	score = climbScoreAtAltitude(startAltitude);
-	selectedTestAltitude = score;
-	coursePreviewOffset = 0;
-	coursePreviewTargetOffset = 0;
-	elapsedTime = 0;
-	standingPlatform = null;
-	stuckElapsed = 0;
-	rescueServedPlatform = null;
-	rescueState = null;
-	armRescue = null;
-	knockbackTime = 0;
-	boostActive = false;
-	direction = 0;
-	pressedKeys.clear();
-	resetConeOnHead();
-	const playerRadius = Math.max(14, Math.min(18, width * 0.045));
-	player = {
-		x: Math.max(
-			playerRadius,
-			Math.min(
-				width - playerRadius,
-				selectedPlatform.x + selectedPlatform.width / 2,
-			),
-		),
-		y: selectedPlatform.y - playerRadius - 1,
-		vx: 0,
-		vy: -JUMP_SPEED,
-		radius: playerRadius,
-	};
-	scoreValue.textContent = `${score}`;
-	playLabel.textContent = 'Restart climb';
-	gameMessage.textContent = pilotName
-		? `Climb resumed from a safe ledge near ${score.toLocaleString()} m. This run can update your leaderboard score.`
-		: `Climb resumed near ${score.toLocaleString()} m. Choose a callsign before the run ends to save its score.`;
-	updateBackground(0, altitude);
-	updateZoneTestControls();
-	drawScene();
 }
 
 function getPlanetRouteAvoidanceZones(nextPlatformAltitude: number): PlatformAvoidanceZone[] {
@@ -5100,8 +4945,6 @@ function makePlatforms(): void {
 		}))
 		: [];
 	summitHeartParticles = [];
-	coursePreviewOffset = 0;
-	coursePreviewTargetOffset = 0;
 	moonX = width * 0.7;
 	seedBackground();
 }
@@ -5126,10 +4969,6 @@ function setDirection(): void {
 }
 
 function beginGame(): void {
-	if (developerMode) {
-		gameMessage.textContent = 'Turn off developer mode before starting a climb.';
-		return;
-	}
 	const enteredName = pilotInput.value.trim().replace(/\s+/g, ' ').slice(0, 24);
 	if (!enteredName) {
 		gameMessage.textContent = 'Choose a name first!';
@@ -5139,19 +4978,16 @@ function beginGame(): void {
 	if (enteredName !== pilotName && !savePilotName(enteredName)) {
 		return;
 	}
-	testFlightAltitude = null;
 	startClimb('Pip is airborne! Catch a fish for a boost; bigger fish launch higher.');
 }
 
-function startClimb(message: string, startAltitude = 0): void {
+function startClimb(message: string): void {
 	climbSession += 1;
-	score = climbScoreAtAltitude(startAltitude);
-	altitude = startAltitude;
+	score = 0;
+	altitude = 0;
 	elapsedTime = 0;
 	summitVictory.hidden = true;
 	summitParticles = [];
-	coursePreviewOffset = 0;
-	coursePreviewTargetOffset = 0;
 	standingPlatform = null;
 	stuckElapsed = 0;
 	rescueServedPlatform = null;
@@ -5171,17 +5007,9 @@ function startClimb(message: string, startAltitude = 0): void {
 	playLabel.textContent = 'Restart climb';
 	gameMessage.textContent = message;
 	updateBackground(0, altitude);
-	updateZoneTestControls();
 }
 
 function endGame(): void {
-	if (testFlightAltitude !== null) {
-		const resultMessage =
-			`Test flight ended at ${score.toLocaleString()} m. ` +
-			`Restarting at ${Math.floor(testFlightAltitude / 10).toLocaleString()} m.`;
-		startClimb(resultMessage, testFlightAltitude);
-		return;
-	}
 	if (score === 0) {
 		startClimb('Pip missed the ledge. Starting a fresh climb.');
 		return;
@@ -5225,13 +5053,6 @@ function reachSummit(): void {
 	});
 	summitVictory.hidden = false;
 	playLabel.textContent = 'Climb again';
-	if (testFlightAltitude !== null) {
-		summitVictoryTitle.textContent = 'Test summit reached';
-		summitVictoryCopy.textContent =
-			'Pip landed at 10,000 m. Test flights do not change your saved scores. Slide left and right to explore.';
-		gameMessage.textContent = 'Pip is safe at the summit. Slide left and right to explore the island.';
-		return;
-	}
 	summitVictoryTitle.textContent = 'You made it!';
 	summitVictoryCopy.textContent = 'Saving your score to the shared leaderboard…';
 	gameMessage.textContent = 'Summit reached! Pip cannot jump here, but can slide left and right.';
@@ -5299,49 +5120,6 @@ function updateSummit(delta: number): void {
 	summitHeartParticles = summitHeartParticles.filter((heart) => heart.age < heart.lifetime);
 }
 
-function updateZoneTestControls(): void {
-	if (!zoneSelector || !zoneReadout || !testFlightButton) return;
-	const selectedAltitude = selectedTestAltitude;
-	const selectedAltitudeUnits = selectedAltitude * 10;
-	const selectedStageIndex = getCourseStageIndex(selectedAltitudeUnits);
-	const selectedStage = COURSE_STAGES[selectedStageIndex];
-	const rangeStart = selectedStageIndex * 1000;
-	const rangeEnd = selectedStageIndex === COURSE_STAGES.length - 1
-		? COURSE_MAX_METERS
-		: rangeStart + 999;
-	zoneSelector.value = `${selectedStageIndex}`;
-	zoneReadout.textContent =
-		`${selectedStage.name} · ${rangeStart.toLocaleString()}–${rangeEnd.toLocaleString()} m · ` +
-		`selected ${selectedAltitude.toLocaleString()} m`;
-	testFlightButton.textContent = mode === 'playing'
-		? 'Restart test flight here'
-		: 'Start test flight here';
-	if (mode !== 'playing') {
-		coursePreviewTargetOffset = selectedAltitudeUnits;
-		drawScene();
-	}
-}
-
-function setDeveloperPreviewAltitude(meters: number): void {
-	if (!developerMode || !Number.isFinite(meters)) return;
-	selectedTestAltitude = Math.max(0, Math.min(COURSE_MAX_METERS, Math.round(meters)));
-	altitudeMeter.setAttribute('aria-valuenow', `${selectedTestAltitude}`);
-	altitudeMeter.setAttribute('aria-valuetext', `${selectedTestAltitude.toLocaleString()} meters`);
-	updateZoneTestControls();
-}
-
-function syncAltitudeMeterInteraction(): void {
-	altitudeMeter.classList.toggle('is-interactive', developerMode);
-	altitudeMeter.setAttribute('role', developerMode ? 'slider' : 'meter');
-	if (developerMode) {
-		altitudeMeter.tabIndex = 0;
-		altitudeMeter.setAttribute('aria-orientation', 'vertical');
-	} else {
-		altitudeMeter.removeAttribute('tabindex');
-		altitudeMeter.removeAttribute('aria-orientation');
-	}
-}
-
 function hasNextReachablePlatform(platform: Platform): boolean {
 	const maxJumpHeight = (JUMP_SPEED * JUMP_SPEED) / (2 * GRAVITY);
 	return hasReachablePlatform(platform, platforms, maxJumpHeight - 8, width * 0.38);
@@ -5406,9 +5184,9 @@ function updateRescue(delta: number): void {
 	rescueState = null;
 }
 
-function drawRescueLine(previewOffset: number): void {
+function drawRescueLine(): void {
 	if (!rescueState) return;
-	const platformY = rescueState.platform.y + previewOffset + rescueState.fishOffsetY;
+	const platformY = rescueState.platform.y + rescueState.fishOffsetY;
 	const hookY = rescueState.phase === 'lowering'
 		? -12 + (platformY + 12) * rescueState.progress
 		: platformY * (1 - rescueState.progress) - 12 * rescueState.progress;
@@ -5789,12 +5567,8 @@ function frame(time: number): void {
 			updateNebulaPlatform(platform, delta);
 		}
 		syncBoostPickups();
-		coursePreviewOffset += (coursePreviewTargetOffset - coursePreviewOffset) * Math.min(1, delta * 10);
-		if (Math.abs(coursePreviewTargetOffset - coursePreviewOffset) < 0.1) {
-			coursePreviewOffset = coursePreviewTargetOffset;
-		}
 	}
-	updateBackground(delta, mode === 'playing' || mode === 'won' ? altitude : coursePreviewOffset);
+	updateBackground(delta, mode === 'playing' || mode === 'won' ? altitude : 0);
 	drawScene();
 	window.requestAnimationFrame(frame);
 }
@@ -5877,9 +5651,8 @@ weatherConsent.addEventListener('change', async () => {
 		return;
 	}
 
-	weatherPreviewInteracted = false;
 	setDeviceTimeFallback(true);
-	setWeatherKind('clear', undefined, true);
+	setWeatherKind('clear', true);
 	weatherRequestState = 'locating';
 	updateLocalConditions();
 	weatherLoading.hidden = false;
@@ -5920,174 +5693,6 @@ summitRestartButton.addEventListener('click', beginGame);
 summitDismissButton.addEventListener('click', () => {
 	summitVictory.hidden = true;
 });
-if (zoneSelector) {
-	zoneSelector.addEventListener('change', () => {
-		const stageIndex = Number(zoneSelector.value);
-		if (!Number.isInteger(stageIndex) || stageIndex < 0 || stageIndex >= COURSE_STAGES.length) {
-			throw new RangeError(`Unknown course stage: ${zoneSelector.value}`);
-		}
-		selectedTestAltitude = stageIndex * 1000 + 500;
-		updateZoneTestControls();
-	});
-}
-for (const button of weatherButtons) {
-	button.addEventListener('click', () => {
-		const kind = button.dataset.weather;
-		if (!isWeatherKind(kind)) throw new RangeError(`Unknown weather preset: ${kind}`);
-		weatherPreviewInteracted = true;
-		locationWeatherLoaded = false;
-		setWeatherKind(kind);
-	});
-}
-if (timePreview) {
-	timePreview.addEventListener('input', () => {
-		const nextTime = Number(timePreview.value);
-		if (!Number.isFinite(nextTime) || nextTime < 0 || nextTime >= 1440) {
-			throw new RangeError(`Unknown time-of-day value: ${timePreview.value}`);
-		}
-		timePreviewInteracted = true;
-		targetEnvironmentTimeMinutes = nextTime;
-		updateEnvironment();
-		updateEnvironmentDescription(
-			`${weatherLabelForKind(weatherKind)} · ${formatClockTime(targetEnvironmentTimeMinutes)}` +
-				(locationWeatherLoaded ? ' · local daylight cycle' : ' · time preview'),
-		);
-	});
-}
-if (testFlightButton) {
-	testFlightButton.addEventListener('click', () => {
-		if (developerMode) {
-			gameMessage.textContent = 'Turn off developer mode before starting a test flight.';
-			return;
-		}
-		if (!pilotName) {
-			gameMessage.textContent = 'Choose a name first!';
-			pilotInput.focus();
-			return;
-		}
-		testFlightAltitude = selectedTestAltitude * 10;
-		const testMeters = Math.floor(testFlightAltitude / 10);
-		startClimb(
-			`TEST FLIGHT at ${testMeters.toLocaleString()} m. Explore freely; this run will not affect your leaderboard.`,
-			testFlightAltitude,
-		);
-	});
-}
-
-canvas.addEventListener('wheel', (event) => {
-	if (!developerMode || mode === 'playing' || mode === 'won') return;
-	event.preventDefault();
-	const scrollScale = developerMode ? 1.2 : 1.8;
-	const nextOffset = Math.max(
-		0,
-		Math.min(COURSE_MAX_ALTITUDE, coursePreviewTargetOffset + event.deltaY * scrollScale),
-	);
-	selectedTestAltitude = Math.round(nextOffset / 100) * 10;
-	updateZoneTestControls();
-}, { passive: false });
-
-altitudeMeter.addEventListener('keydown', (event) => {
-	if (!developerMode) return;
-	let nextAltitude: number;
-	switch (event.key) {
-		case 'ArrowUp':
-		case 'ArrowRight':
-			nextAltitude = selectedTestAltitude + 10;
-			break;
-		case 'ArrowDown':
-		case 'ArrowLeft':
-			nextAltitude = selectedTestAltitude - 10;
-			break;
-		case 'PageUp':
-			nextAltitude = selectedTestAltitude + 1000;
-			break;
-		case 'PageDown':
-			nextAltitude = selectedTestAltitude - 1000;
-			break;
-		case 'Home':
-			nextAltitude = 0;
-			break;
-		case 'End':
-			nextAltitude = COURSE_MAX_METERS;
-			break;
-		default:
-			return;
-	}
-	event.preventDefault();
-	event.stopPropagation();
-	setDeveloperPreviewAltitude(nextAltitude);
-});
-
-altitudeMeterTrack.addEventListener('pointerdown', (event) => {
-	if (!developerMode) return;
-	event.preventDefault();
-	elevationDragPointerId = event.pointerId;
-	altitudeMeterTrack.setPointerCapture(event.pointerId);
-	altitudeMeter.focus({ preventScroll: true });
-	const bounds = altitudeMeterTrack.getBoundingClientRect();
-	if (bounds.height > 0) {
-		setDeveloperPreviewAltitude(
-			((bounds.bottom - event.clientY) / bounds.height) * COURSE_MAX_METERS,
-		);
-	}
-});
-
-altitudeMeterTrack.addEventListener('pointermove', (event) => {
-	if (!developerMode || elevationDragPointerId !== event.pointerId) return;
-	const bounds = altitudeMeterTrack.getBoundingClientRect();
-	if (bounds.height > 0) {
-		setDeveloperPreviewAltitude(
-			((bounds.bottom - event.clientY) / bounds.height) * COURSE_MAX_METERS,
-		);
-	}
-});
-
-const stopElevationDrag = (event: PointerEvent) => {
-	if (elevationDragPointerId !== event.pointerId) return;
-	elevationDragPointerId = null;
-};
-
-altitudeMeterTrack.addEventListener('pointerup', stopElevationDrag);
-altitudeMeterTrack.addEventListener('pointercancel', stopElevationDrag);
-altitudeMeterTrack.addEventListener('lostpointercapture', stopElevationDrag);
-
-if (developerModeToggle) {
-	developerModeToggle.addEventListener('change', () => {
-		if (!developerModeToggle.checked) {
-			startPreviewFlight();
-			return;
-		}
-
-		const previewAltitude = mode === 'playing' || mode === 'won' ? altitude : coursePreviewOffset;
-		developerMode = true;
-		syncAltitudeMeterInteraction();
-		mode = 'ready';
-		updatePilotFormAvailability();
-		summitVictory.hidden = true;
-		summitParticles = [];
-		testFlightAltitude = null;
-		altitude = 0;
-		elapsedTime = 0;
-		pressedKeys.clear();
-		direction = 0;
-		makePlatforms();
-		selectedTestAltitude = Math.round(previewAltitude / 10);
-		coursePreviewOffset = selectedTestAltitude * 10;
-		coursePreviewTargetOffset = coursePreviewOffset;
-		score = selectedTestAltitude;
-		scoreValue.textContent = `${score}`;
-		rescueState = null;
-		armRescue = null;
-		developerModeToggle.checked = true;
-		playLabel.textContent = 'Start climb';
-		gameMessage.textContent =
-			'Developer mode is on. Scroll over the game window to inspect the full 0–10,000 m course.';
-		updateBackground(0, coursePreviewOffset);
-		updateZoneTestControls();
-		drawScene();
-	});
-}
-
 function holdDirection(button: HTMLButtonElement, key: string): void {
 	button.addEventListener('pointerdown', (event) => {
 		event.preventDefault();

@@ -3,8 +3,6 @@ import BaseHead from '../components/BaseHead.astro';
 import Footer from '../components/Footer.astro';
 import Header from '../components/Header.astro';
 import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
-
-const isDeveloper = Astro.locals.isDeveloper;
 ---
 
 <!doctype html>
@@ -121,49 +119,11 @@ const isDeveloper = Astro.locals.isDeveloper;
 								<span class="keyboard-hint">OR USE A / D</span>
 							</div>
 							<div class="current-zone" id="current-zone" aria-live="polite">Earth's Atmosphere</div>
-							{isDeveloper && (
-								<div class="zone-test-picker">
-									<label for="zone-selector">TEST ZONE</label>
-									<select id="zone-selector">
-										<option value="0">Earth's Atmosphere</option>
-										<option value="1">The Moon</option>
-										<option value="2">Mars</option>
-										<option value="3">Jupiter</option>
-										<option value="4">Saturn</option>
-										<option value="5">Uranus</option>
-										<option value="6">Neptune</option>
-										<option value="7">Kuiper Belt</option>
-										<option value="8">Oort Cloud</option>
-										<option value="9">Interstellar Space</option>
-									</select>
-								</div>
-							)}
 							<button class="play-button" id="play-button" type="button">
 								<span class="play-icon" aria-hidden="true">▶</span>
 								<span id="play-label">Start a climb</span>
 							</button>
 						</div>
-						{isDeveloper && (
-							<>
-								<div class="developer-toolbar">
-									<label class="developer-mode-control" for="developer-mode">
-										<input id="developer-mode" type="checkbox" />
-										<span><strong>Developer mode</strong><small>Hide Pip and scroll the full course preview</small></span>
-									</label>
-									<form action="/api/developer-session" method="post">
-										<input type="hidden" name="action" value="logout" />
-										<button class="developer-logout" type="submit">Sign out</button>
-									</form>
-								</div>
-								<section class="zone-test-controls" aria-label="Temporary zone test controls">
-									<div class="zone-test-action">
-										<p id="zone-readout" aria-live="polite">Earth's Atmosphere · selected altitude 0 m</p>
-										<button id="test-flight-button" type="button">Start test flight here</button>
-									</div>
-									<p class="zone-test-note">Choose a zone and launch Pip there. Test flights do not affect saved scores.</p>
-								</section>
-							</>
-						)}
 						<p class="visually-hidden" id="game-message" role="status" aria-live="polite"></p>
 					</div>
 					<aside class="side-column">
@@ -176,34 +136,6 @@ const isDeveloper = Astro.locals.isDeveloper;
 						</section>
 					</aside>
 				</section>
-				{isDeveloper && (
-					<section class="environment-controls" aria-label="Weather and time preview">
-						<div>
-							<p class="card-kicker">PREVIEW THE SKY</p>
-							<p id="environment-description">Choose a weather preset or time to preview Pip’s environment.</p>
-						</div>
-						<div class="weather-presets" id="weather-presets" role="group" aria-label="Weather presets">
-							<button type="button" data-weather="clear">Clear</button>
-							<button type="button" data-weather="cloud">Cloudy</button>
-							<button type="button" data-weather="fog">Fog</button>
-							<button type="button" data-weather="drizzle">Drizzle</button>
-							<button type="button" data-weather="freezing-drizzle">Freezing drizzle</button>
-							<button type="button" data-weather="rain">Rain</button>
-							<button type="button" data-weather="freezing-rain">Freezing rain</button>
-							<button type="button" data-weather="snow">Snow</button>
-							<button type="button" data-weather="snow-grains">Snow grains</button>
-							<button type="button" data-weather="rain-showers">Rain showers</button>
-							<button type="button" data-weather="snow-showers">Snow showers</button>
-							<button type="button" data-weather="thunderstorm">Thunderstorm</button>
-							<button type="button" data-weather="hail">Thunderstorm + hail</button>
-						</div>
-						<label class="time-preview" for="time-preview">
-							<span>TIME OF DAY</span>
-							<input id="time-preview" type="range" min="0" max="1439" step="15" value="720" />
-							<output id="time-preview-label" for="time-preview">12:00</output>
-						</label>
-					</section>
-				)}
 
 				<section class="how-to" id="how-to-play" aria-labelledby="how-to-title">
 					<div class="how-to-heading">

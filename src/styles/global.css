@@ -490,18 +490,6 @@ select:focus-visible {
 	justify-content: center;
 }
 
-.altitude-meter.is-interactive {
-	pointer-events: auto;
-	cursor: ns-resize;
-	touch-action: none;
-}
-
-.altitude-meter.is-interactive:focus-visible {
-	outline: 2px solid #fff;
-	outline-offset: 5px;
-	border-radius: 6px;
-}
-
 .altitude-meter-track {
 	position: relative;
 	width: 7px;
@@ -512,11 +500,6 @@ select:focus-visible {
 	border-radius: 999px;
 	background: rgba(14, 30, 47, 0.36);
 	box-shadow: 0 1px 8px rgba(10, 25, 43, 0.24);
-}
-
-.altitude-meter.is-interactive .altitude-meter-track {
-	width: 16px;
-	cursor: ns-resize;
 }
 
 .altitude-record-marker {
@@ -802,74 +785,6 @@ select:focus-visible {
 	padding-top: 16px;
 }
 
-.developer-mode-control {
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	margin-top: 12px;
-	padding: 10px 12px;
-	border: 1px solid #e0ebe6;
-	border-radius: 11px;
-	background: #f6faf7;
-	color: #527078;
-	cursor: pointer;
-}
-
-.developer-toolbar {
-	display: flex;
-	align-items: center;
-	gap: 12px;
-	margin-top: 12px;
-}
-
-.developer-toolbar .developer-mode-control {
-	flex: 1;
-	margin-top: 0;
-}
-
-.developer-logout {
-	padding: 6px 0;
-	border: 0;
-	background: transparent;
-	color: var(--muted);
-	font: inherit;
-	font-size: 12px;
-	cursor: pointer;
-}
-
-.developer-logout:hover,
-.developer-logout:focus-visible {
-	color: var(--teal);
-	text-decoration: underline;
-}
-
-.developer-mode-control input {
-	width: 17px;
-	height: 17px;
-	margin: 0;
-	accent-color: var(--teal);
-}
-
-.developer-mode-control span {
-	display: grid;
-	gap: 1px;
-}
-
-.developer-mode-control strong {
-	font-size: 12px;
-}
-
-.developer-mode-control small {
-	color: #82989b;
-	font-size: 11px;
-}
-
-.game-controls .zone-test-picker {
-	min-width: 140px;
-	max-width: 220px;
-	flex: 1;
-}
-
 .direction-controls {
 	display: flex;
 	align-items: center;
@@ -936,79 +851,6 @@ select:focus-visible {
 
 .play-button:active {
 	transform: translateY(1px);
-}
-
-.zone-test-controls {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) auto;
-	align-items: end;
-	gap: 9px 14px;
-	margin-top: 13px;
-	padding: 13px;
-	border: 1px solid #e0ebe6;
-	border-radius: 13px;
-	background: linear-gradient(135deg, #f6faf7, #f2f8f8);
-}
-
-.zone-test-picker label {
-	display: block;
-	margin-bottom: 5px;
-	color: #66827f;
-	font-size: 11px;
-	font-weight: 800;
-	letter-spacing: 0.6px;
-	text-transform: uppercase;
-}
-
-.zone-test-picker select {
-	width: 100%;
-	min-height: 40px;
-	padding: 8px 10px;
-	border: 1px solid #dce8e2;
-	border-radius: 9px;
-	background: #fff;
-	color: #23434d;
-	font: inherit;
-	font-size: 13px;
-	font-weight: 700;
-}
-
-.zone-test-action {
-	display: flex;
-	align-items: center;
-	gap: 9px;
-}
-
-.zone-test-action p {
-	max-width: 145px;
-	margin: 0;
-	color: #6d878b;
-	font-size: 11px;
-	line-height: 1.4;
-}
-
-.zone-test-action button {
-	min-height: 40px;
-	padding: 8px 12px;
-	border: 1px solid #bdddd1;
-	border-radius: 9px;
-	background: #e5f3eb;
-	color: #206a68;
-	font-size: 12px;
-	font-weight: 800;
-	white-space: nowrap;
-	cursor: pointer;
-}
-
-.zone-test-action button:hover {
-	background: #d7eee2;
-}
-
-.zone-test-note {
-	grid-column: 1 / -1;
-	margin: 0;
-	color: #8a9d9b;
-	font-size: 11px;
 }
 
 .course-guide {
@@ -1207,74 +1049,6 @@ textarea::placeholder {
 	to {
 		transform: translateX(34px);
 	}
-}
-
-.environment-controls {
-	display: grid;
-	grid-template-columns: minmax(160px, 0.8fr) minmax(0, 1.8fr);
-	gap: 12px 22px;
-	align-items: center;
-	margin-top: 15px;
-	padding: 17px 20px;
-	border: 1px solid rgba(222, 230, 225, 0.9);
-	border-radius: 16px;
-	background: var(--paper);
-	box-shadow: var(--shadow);
-}
-
-.environment-controls p {
-	margin: 4px 0 0;
-	color: #7a9092;
-	font-size: 12px;
-	line-height: 1.5;
-}
-
-.weather-presets {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 6px;
-}
-
-.weather-presets button {
-	padding: 7px 9px;
-	border: 1px solid #e1ebe6;
-	border-radius: 999px;
-	background: #f8fbf9;
-	color: #607c7e;
-	font: inherit;
-	font-size: 11px;
-	font-weight: 700;
-	cursor: pointer;
-}
-
-.weather-presets button[aria-pressed="true"] {
-	border-color: #73b6a3;
-	background: #e4f3ec;
-	color: #236b66;
-}
-
-.time-preview {
-	grid-column: 1 / -1;
-	display: grid;
-	grid-template-columns: auto minmax(100px, 1fr) 44px;
-	align-items: center;
-	gap: 12px;
-	color: #66827f;
-	font-size: 11px;
-	font-weight: 800;
-	letter-spacing: 0.6px;
-}
-
-.time-preview input {
-	width: 100%;
-	accent-color: var(--teal);
-}
-
-.time-preview output {
-	color: #2b555a;
-	font-size: 13px;
-	font-variant-numeric: tabular-nums;
-	text-align: right;
 }
 
 .side-column {
@@ -1648,20 +1422,7 @@ textarea::placeholder {
 	font-weight: 700;
 }
 
-.site-footer .developer-access-link {
-	padding: 4px;
-	color: var(--line);
-	font-size: 13px;
-	line-height: 1;
-	text-decoration: none;
-}
 
-.site-footer .developer-access-link:hover,
-.site-footer .developer-access-link:focus-visible {
-	color: var(--teal);
-	opacity: 0.8;
-	outline-offset: 2px;
-}
 
 @media (max-width: 800px) {
 	.site-header,
@@ -1858,12 +1619,6 @@ textarea::placeholder {
 		gap: 8px;
 	}
 
-	.game-controls .zone-test-picker {
-		order: 3;
-		max-width: none;
-		flex-basis: 100%;
-	}
-
 	.direction-controls {
 		gap: 8px;
 	}
@@ -1881,32 +1636,6 @@ textarea::placeholder {
 		min-width: 132px;
 		min-height: 46px;
 		padding-inline: 12px;
-	}
-
-	.zone-test-controls {
-		grid-template-columns: 1fr;
-		gap: 8px;
-		padding: 11px;
-	}
-
-	.environment-controls {
-		grid-template-columns: 1fr;
-		gap: 12px;
-		padding: 15px;
-	}
-
-	.time-preview {
-		grid-column: auto;
-		grid-template-columns: auto minmax(70px, 1fr) 42px;
-		gap: 8px;
-	}
-
-	.zone-test-action {
-		justify-content: space-between;
-	}
-
-	.zone-test-action p {
-		max-width: none;
 	}
 
 	.course-guide summary {
@@ -2122,7 +1851,6 @@ textarea::placeholder {
 :root[data-theme='dark'] .site-header nav a,
 :root[data-theme='dark'] .site-footer .footer-back-link,
 :root[data-theme='dark'] .intro-text,
-:root[data-theme='dark'] .environment-controls p,
 :root[data-theme='dark'] .course-guide summary,
 :root[data-theme='dark'] .course-guide-content,
 :root[data-theme='dark'] .how-to,
@@ -2185,7 +1913,6 @@ textarea::placeholder {
 
 :root[data-theme='dark'] .game-card,
 :root[data-theme='dark'] .panel,
-:root[data-theme='dark'] .environment-controls,
 :root[data-theme='dark'] .course-guide,
 :root[data-theme='dark'] .step-card {
 	border-color: rgba(190, 215, 222, 0.14);
@@ -2194,7 +1921,6 @@ textarea::placeholder {
 
 :root[data-theme='dark'] .game-card,
 :root[data-theme='dark'] .panel,
-:root[data-theme='dark'] .environment-controls,
 :root[data-theme='dark'] .course-guide,
 :root[data-theme='dark'] .step-card,
 :root[data-theme='dark'] .theme-toggle {
@@ -2202,9 +1928,6 @@ textarea::placeholder {
 }
 
 :root[data-theme='dark'] .score-pill,
-:root[data-theme='dark'] .developer-mode-control,
-:root[data-theme='dark'] .zone-test-controls,
-:root[data-theme='dark'] .weather-presets button,
 :root[data-theme='dark'] .direction-button,
 :root[data-theme='dark'] .theme-toggle {
 	border-color: #3a505a;
@@ -2212,7 +1935,6 @@ textarea::placeholder {
 	color: #c9d9df;
 }
 
-:root[data-theme='dark'] .developer-mode-control small,
 :root[data-theme='dark'] .leaderboard-list li,
 :root[data-theme='dark'] .leaderboard-footnote,
 :root[data-theme='dark'] .score-pill > span,
@@ -2220,30 +1942,11 @@ textarea::placeholder {
 	color: #9db2ba;
 }
 
-:root[data-theme='dark'] .zone-test-controls {
-	background: linear-gradient(135deg, #1a2a33, #1b3037);
-}
-
-:root[data-theme='dark'] .zone-test-picker label,
-:root[data-theme='dark'] .zone-test-action p,
-:root[data-theme='dark'] .time-preview,
-:root[data-theme='dark'] .time-preview output {
-	color: #afc5ca;
-}
-
-:root[data-theme='dark'] .zone-test-picker select,
 :root[data-theme='dark'] input:not([type='checkbox']):not([type='range']),
 :root[data-theme='dark'] select {
 	border-color: #41565f;
 	background: #182730;
 	color: #e5edf2;
-}
-
-:root[data-theme='dark'] .weather-presets button[aria-pressed='true'],
-:root[data-theme='dark'] .zone-test-action button {
-	border-color: #4b9f8f;
-	background: #22483f;
-	color: #b9eee0;
 }
 
 :root[data-theme='dark'] .weather-note p {
@@ -2306,17 +2009,8 @@ textarea::placeholder {
 	.weather-refresh,
 	.score-pill > span,
 	.score-pill small,
-	.developer-mode-control,
-	.developer-mode-control small,
 	.keyboard-hint,
-	.zone-test-picker label,
-	.zone-test-action p,
-	.zone-test-note,
 	#pilot-form label,
-	#environment-description,
-	.weather-presets button,
-	.time-preview,
-	.time-preview output,
 	.leaderboard-list li,
 	.leader-rank,
 	.leader-score,
@@ -2354,17 +2048,8 @@ textarea::placeholder {
 	.weather-refresh,
 	.score-pill > span,
 	.score-pill small,
-	.developer-mode-control,
-	.developer-mode-control small,
 	.keyboard-hint,
-	.zone-test-picker label,
-	.zone-test-action p,
-	.zone-test-note,
 	#pilot-form label,
-	#environment-description,
-	.weather-presets button,
-	.time-preview,
-	.time-preview output,
 	.leaderboard-list li,
 	.leader-rank,
 	.leader-score,
