@@ -53,7 +53,9 @@ stack and store only the Supabase server secret key in it. The ECS task role
 receives permission to read the secret; the key is injected at task startup and
 is not included in the container image or CloudFormation template. The
 `SupabaseUrl` parameter is required by both CDK and the GitHub deployment
-workflow.
+workflow. The `PublicSiteOrigin` parameter must be set to the service's
+`CloudFrontUrl` output so browser score submissions can be checked against the
+public origin even though CloudFront forwards requests to the ALB.
 
 Before deploying, confirm the AWS CLI is authenticated to the intended account
 and region, and that the selected image tag exists in that account's ECR
@@ -90,10 +92,12 @@ tag, or from the `cdk` directory. Supply the Supabase project URL as well:
 
 ```powershell
 $SupabaseUrl = 'https://your-project-ref.supabase.co'
-npx cdk deploy EcsStack --parameters EcsStack:ImageTag=$ImageTag --parameters EcsStack:SupabaseUrl=$SupabaseUrl
+$PublicSiteOrigin = 'https://your-distribution-id.cloudfront.net'
+npx cdk deploy EcsStack --parameters EcsStack:ImageTag=$ImageTag --parameters EcsStack:SupabaseUrl=$SupabaseUrl --parameters EcsStack:PublicSiteOrigin=$PublicSiteOrigin
 ```
 
-The `CloudFrontUrl` output is the HTTPS address for the SSR service. The
+The `CloudFrontUrl` output is the HTTPS address for the SSR service and the
+value to use for `PublicSiteOrigin`. The
 `LoadBalancerDnsName` output is the HTTP origin hostname; use the CloudFront
 URL in a browser. The existing static website and its CloudFront distribution
 remain unchanged. To stop ALB, CloudFront, and Fargate charges after the lab,

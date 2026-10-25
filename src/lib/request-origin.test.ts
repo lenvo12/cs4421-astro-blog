@@ -26,6 +26,28 @@ describe('isSameOriginRequest', () => {
 		expect(isSameOriginRequest(request)).toBe(true);
 	});
 
+	it('uses the configured public origin when CloudFront changes the origin host', () => {
+		const request = new Request('http://internal-alb.example/api', {
+			headers: {
+				Origin: 'https://game.example',
+				'X-CloudFront-Viewer-Proto': 'https',
+			},
+		});
+
+		expect(isSameOriginRequest(request, 'https://game.example')).toBe(true);
+	});
+
+	it('rejects origins that do not match the configured public origin', () => {
+		const request = new Request('http://internal-alb.example/api', {
+			headers: {
+				Origin: 'https://attacker.example',
+				'X-CloudFront-Viewer-Proto': 'https',
+			},
+		});
+
+		expect(isSameOriginRequest(request, 'https://game.example')).toBe(false);
+	});
+
 	it('rejects cross-origin requests even with the CloudFront protocol header', () => {
 		const request = new Request('http://game.example/api', {
 			headers: {

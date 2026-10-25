@@ -37,6 +37,13 @@ export class EcsStack extends cdk.Stack {
       description: 'HTTPS URL of the Supabase project used by the leaderboard API.',
     });
 
+    const publicSiteOrigin = new cdk.CfnParameter(this, 'PublicSiteOrigin', {
+      type: 'String',
+      minLength: 1,
+      allowedPattern: '^https://[A-Za-z0-9.-]+$',
+      description: 'Public HTTPS origin used to validate browser score submissions.',
+    });
+
     const supabaseSecret = secretsmanager.Secret.fromSecretNameV2(
       this,
       'SupabaseSecretKey',
@@ -78,6 +85,7 @@ export class EcsStack extends cdk.Stack {
           HOST: '0.0.0.0',
           PORT: '4321',
           SUPABASE_URL: supabaseUrl.valueAsString,
+          PUBLIC_SITE_ORIGIN: publicSiteOrigin.valueAsString,
         },
         secrets: {
           SUPABASE_SECRET_KEY: ecs.Secret.fromSecretsManager(supabaseSecret),

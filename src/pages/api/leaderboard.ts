@@ -50,7 +50,7 @@ export const GET: APIRoute = async ({ request }) => {
 };
 
 export const POST: APIRoute = async ({ request }) => {
-	if (!isSameOriginRequest(request)) {
+	if (!isSameOriginRequest(request, process.env.PUBLIC_SITE_ORIGIN)) {
 		return jsonResponse({ error: 'Cross-origin requests are not allowed.' }, 403);
 	}
 	const contentLength = Number(request.headers.get('content-length'));

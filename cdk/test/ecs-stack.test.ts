@@ -24,6 +24,11 @@ test('runs the existing tagged ECR image as one small Fargate task', () => {
     MinLength: 1,
     AllowedPattern: '^https://[A-Za-z0-9.-]+$',
   });
+  template.hasParameter('PublicSiteOrigin', {
+    Type: 'String',
+    MinLength: 1,
+    AllowedPattern: '^https://[A-Za-z0-9.-]+$',
+  });
   template.hasResourceProperties('AWS::ECS::TaskDefinition', {
     Cpu: '256',
     Memory: '512',
@@ -38,6 +43,7 @@ test('runs the existing tagged ECR image as one small Fargate task', () => {
           { Name: 'HOST', Value: '0.0.0.0' },
           { Name: 'PORT', Value: '4321' },
           { Name: 'SUPABASE_URL', Value: Match.anyValue() },
+          { Name: 'PUBLIC_SITE_ORIGIN', Value: Match.anyValue() },
         ]),
         Secrets: Match.arrayWith([
           Match.objectLike({

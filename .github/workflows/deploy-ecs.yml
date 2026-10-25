@@ -12,6 +12,10 @@ on:
         description: HTTPS URL of the Supabase project used by the leaderboard API
         required: true
         type: string
+      public_site_origin:
+        description: HTTPS CloudFrontUrl output for the ECS service
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -49,6 +53,7 @@ jobs:
         env:
           IMAGE_TAG: ${{ inputs.image_tag }}
           SUPABASE_URL: ${{ inputs.supabase_url }}
+          PUBLIC_SITE_ORIGIN: ${{ inputs.public_site_origin }}
         run: |
           if [[ ! "$IMAGE_TAG" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]]; then
             echo "Invalid ECR image tag: $IMAGE_TAG" >&2
@@ -58,8 +63,13 @@ jobs:
             echo "Invalid Supabase project URL." >&2
             exit 1
           fi
+          if [[ ! "$PUBLIC_SITE_ORIGIN" =~ ^https://[A-Za-z0-9.-]+$ ]]; then
+            echo "Invalid public site origin." >&2
+            exit 1
+          fi
           npx cdk deploy EcsStack \
             --parameters "EcsStack:ImageTag=$IMAGE_TAG" \
             --parameters "EcsStack:SupabaseUrl=$SUPABASE_URL" \
+            --parameters "EcsStack:PublicSiteOrigin=$PUBLIC_SITE_ORIGIN" \
             --require-approval never
         working-directory: cdk

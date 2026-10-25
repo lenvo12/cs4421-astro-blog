@@ -1,9 +1,14 @@
-export function isSameOriginRequest(request: Request): boolean {
+export function isSameOriginRequest(request: Request, publicOrigin?: string): boolean {
 	const origin = request.headers.get('origin');
 	if (!origin) return true;
 
 	try {
 		const originUrl = new URL(origin);
+		if (publicOrigin) {
+			const publicOriginUrl = new URL(publicOrigin);
+			return originUrl.origin === publicOriginUrl.origin;
+		}
+
 		const requestUrl = new URL(request.url);
 		const cloudFrontProtocol = request.headers.get('x-cloudfront-viewer-proto')?.trim();
 		const forwardedProtocol = cloudFrontProtocol
