@@ -33,6 +33,15 @@ Run these commands from the project root:
 | `npm run build`           | Build the production site to `./dist/`           |
 | `npm run preview`         | Preview the production build locally             |
 
+## Shared leaderboard
+
+The shared leaderboard uses the Supabase project URL and a server-only secret
+key. For local development, copy `.env.example` to `.env` and set
+`SUPABASE_URL` and `SUPABASE_SECRET_KEY`. Never expose the secret key through
+client-side code or commit it. The site validates score submissions on its
+server, but without player accounts it cannot verify that a submitted score was
+earned in a real game.
+
 ## Owner-only developer tools
 
 The public game hides developer mode, zone test flights, and weather/time preview controls. On a Node.js server deployment, use the small dot at the end of the footer to open the password form.

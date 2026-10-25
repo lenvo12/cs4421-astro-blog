@@ -8,6 +8,10 @@ on:
         required: true
         type: string
         default: v1.0.1
+      supabase_url:
+        description: HTTPS URL of the Supabase project used by the leaderboard API
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -44,10 +48,18 @@ jobs:
       - name: Deploy ECS service
         env:
           IMAGE_TAG: ${{ inputs.image_tag }}
+          SUPABASE_URL: ${{ inputs.supabase_url }}
         run: |
           if [[ ! "$IMAGE_TAG" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]]; then
             echo "Invalid ECR image tag: $IMAGE_TAG" >&2
             exit 1
           fi
-          npx cdk deploy EcsStack --parameters "EcsStack:ImageTag=$IMAGE_TAG" --require-approval never
+          if [[ ! "$SUPABASE_URL" =~ ^https://[A-Za-z0-9.-]+$ ]]; then
+            echo "Invalid Supabase project URL." >&2
+            exit 1
+          fi
+          npx cdk deploy EcsStack \
+            --parameters "EcsStack:ImageTag=$IMAGE_TAG" \
+            --parameters "EcsStack:SupabaseUrl=$SUPABASE_URL" \
+            --require-approval never
         working-directory: cdk

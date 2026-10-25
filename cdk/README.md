@@ -38,6 +38,15 @@ setup, not a high-availability production setup. The ALB and public IPv4
 addresses can incur charges for as long as the stack exists, even when the
 service is idle.
 
+The leaderboard API reads `SUPABASE_URL` from the `SupabaseUrl` stack
+parameter and `SUPABASE_SECRET_KEY` from the existing Secrets Manager secret
+`pips-ascension/supabase-secret-key`. Create that secret before deploying the
+stack and store only the Supabase server secret key in it. The ECS task role
+receives permission to read the secret; the key is injected at task startup and
+is not included in the container image or CloudFormation template. The
+`SupabaseUrl` parameter is required by both CDK and the GitHub deployment
+workflow.
+
 Before deploying, confirm the AWS CLI is authenticated to the intended account
 and region, and that the selected image tag exists in that account's ECR
 repository. `cdk synth` and `cdk diff` do not create the service. Review the
@@ -69,10 +78,11 @@ docker push "$EcrUri/astro-blog:$ImageTag"
 
 Use a new tag for each application version so rollback can select a known image.
 For example, after pushing a new image, deploy it from GitHub Actions using that
-tag, or from the `cdk` directory:
+tag, or from the `cdk` directory. Supply the Supabase project URL as well:
 
 ```powershell
-npx cdk deploy EcsStack --parameters EcsStack:ImageTag=$ImageTag
+$SupabaseUrl = 'https://your-project-ref.supabase.co'
+npx cdk deploy EcsStack --parameters EcsStack:ImageTag=$ImageTag --parameters EcsStack:SupabaseUrl=$SupabaseUrl
 ```
 
 The `LoadBalancerDnsName` output is the public HTTP address. The existing

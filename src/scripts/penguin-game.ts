@@ -51,10 +51,10 @@ import {
 	type WeatherLoadStage,
 } from './local-weather';
 import {
-	nextScoreAchievementTime,
 	rankLeaderboardEntries,
 	type ScoreEntry,
 } from './leaderboard';
+import { fetchLeaderboard, postLeaderboardScore } from './leaderboard-client';
 interface BackgroundElement {
 	type:
 		| 'cloud' | 'bird' | 'plane' | 'distantPlane' | 'star' | 'comet' | 'station' | 'satellite' | 'asteroid'
@@ -322,6 +322,10 @@ let width = 0;
 let height = 0;
 let mode: GameMode = 'ready';
 let pilotName = '';
+let leaderboardEntries: ScoreEntry[] = [];
+let leaderboardStatus: 'loading' | 'ready' | 'error' = 'loading';
+let leaderboardLoadSequence = 0;
+let climbSession = 0;
 let direction = 0;
 let score = 0;
 let personalBestScore = 0;
@@ -511,28 +515,9 @@ const astronautSprite = loadGameSprite('/game/astronaut.png');
 const airlinerSprite = loadGameSprite('/game/airliner.png');
 
 function noteStorageProblem(error: unknown): void {
-	console.warn('Browser storage is unavailable; scores will not persist.', error);
-	storageNote.textContent = 'Browser storage is unavailable; scores cannot be saved.';
+	console.warn('Browser storage is unavailable; this tab may not remember your callsign.', error);
+	storageNote.textContent = 'Browser storage is unavailable; this tab may not remember your callsign.';
 	storageNote.hidden = false;
-}
-
-function getStoredValue(key: string): string | null {
-	try {
-		return window.localStorage.getItem(key);
-	} catch (error) {
-		noteStorageProblem(error);
-		return null;
-	}
-}
-
-function setStoredValue(key: string, value: string): boolean {
-	try {
-		window.localStorage.setItem(key, value);
-		return true;
-	} catch (error) {
-		noteStorageProblem(error);
-		return false;
-	}
 }
 
 function getSessionPilotName(): string | null {
@@ -572,50 +557,6 @@ function clearPreviouslySavedScores(): void {
 	}
 }
 
-function isScoreEntry(value: unknown): value is ScoreEntry {
-	if (typeof value !== 'object' || value === null) return false;
-	const entry = value as Record<string, unknown>;
-	return (
-		typeof entry.name === 'string' &&
-		entry.name.length > 0 &&
-		typeof entry.score === 'number' &&
-		Number.isFinite(entry.score) &&
-		entry.score >= 0 &&
-		(!('summit' in entry) || typeof entry.summit === 'boolean') &&
-		(!('achievedAt' in entry) ||
-			(typeof entry.achievedAt === 'number' &&
-				Number.isSafeInteger(entry.achievedAt) &&
-				entry.achievedAt >= 0))
-	);
-}
-
-function getScores(): ScoreEntry[] {
-	const stored = getStoredValue(SCORE_KEY);
-	if (!stored) return [];
-
-	try {
-		const parsed: unknown = JSON.parse(stored);
-		if (!Array.isArray(parsed)) throw new Error('Saved leaderboard data is not a list.');
-		const entries: ScoreEntry[] = parsed
-			.filter(isScoreEntry)
-			.map((entry) => {
-				const summit = entry.summit === true && entry.score >= COURSE_MAX_METERS;
-				return {
-					name: entry.name,
-					score: Math.min(entry.score, summit ? COURSE_MAX_METERS : COURSE_MAX_METERS - 1),
-					achievedAt: entry.achievedAt ?? 0,
-					summit,
-				};
-			});
-		return rankLeaderboardEntries(entries);
-	} catch (error) {
-		console.warn('Saved leaderboard data could not be read.', error);
-		storageNote.textContent = 'Saved scores could not be read; you can still play and set a new one.';
-		storageNote.hidden = false;
-		return [];
-	}
-}
-
 function updatePilotFormAvailability(): void {
 	const nameLocked = mode === 'playing';
 	pilotInput.disabled = nameLocked;
@@ -636,13 +577,13 @@ function savePilotName(value: string): boolean {
 	}
 	pilotName = nextName;
 	pilotInput.value = pilotName;
-	personalBestScore =
-		getScores().find((entry) => entry.name.toLowerCase() === pilotName.toLowerCase())?.score ?? 0;
+	personalBestScore = leaderboardEntries.find((entry) => entry.name === pilotName)?.score ?? 0;
 	const persisted = setSessionPilotName(pilotName);
 	updateAltitudeRecordMarkers();
 	gameMessage.textContent = persisted
 		? `Ready, ${pilotName}. This tab will remember your name until it closes.`
 		: `Ready, ${pilotName}. Your name will last for this page only.`;
+	void refreshLeaderboard(pilotName);
 	return true;
 }
 
@@ -685,7 +626,7 @@ function updateAltitudeRecordMarkers(): void {
 }
 
 function renderLeaderboard(): void {
-	const scores = getScores();
+	const scores = rankLeaderboardEntries(leaderboardEntries);
 	overallBestScore = scores[0]?.score ?? 0;
 	overallBestName = scores[0]?.name ?? '';
 	updateAltitudeRecordMarkers();
@@ -699,10 +640,22 @@ function renderLeaderboard(): void {
 		star.setAttribute('aria-hidden', 'true');
 		star.textContent = '✦';
 		const copy = document.createElement('span');
-		copy.textContent = 'Your first climb could go here.';
+		copy.textContent = leaderboardStatus === 'loading'
+			? 'Loading the shared leaderboard…'
+			: leaderboardStatus === 'error'
+				? 'The shared leaderboard is temporarily unavailable.'
+				: 'Your first climb could go here.';
 		empty.append(star, copy);
 		leaderboardList.append(empty);
 		return;
+	}
+
+	if (leaderboardStatus === 'error') {
+		const warning = document.createElement('li');
+		warning.className = 'empty-leaderboard';
+		warning.setAttribute('role', 'status');
+		warning.textContent = 'Could not refresh the shared leaderboard.';
+		leaderboardList.append(warning);
 	}
 
 	for (const [index, entry] of scores.entries()) {
@@ -742,6 +695,24 @@ function renderLeaderboard(): void {
 	updateLeaderboardNamePreviews();
 }
 
+async function refreshLeaderboard(name = pilotName): Promise<void> {
+	const sequence = ++leaderboardLoadSequence;
+	if (leaderboardEntries.length === 0) leaderboardStatus = 'loading';
+	renderLeaderboard();
+	try {
+		const snapshot = await fetchLeaderboard(name || undefined);
+		if (sequence !== leaderboardLoadSequence) return;
+		leaderboardEntries = rankLeaderboardEntries(snapshot.entries);
+		if (name === pilotName) personalBestScore = snapshot.personalBest?.score ?? 0;
+		leaderboardStatus = 'ready';
+	} catch (error) {
+		if (sequence !== leaderboardLoadSequence) return;
+		console.error('The shared leaderboard could not be loaded.', error);
+		leaderboardStatus = 'error';
+	}
+	renderLeaderboard();
+}
+
 function updateLeaderboardNamePreviews(): void {
 	for (const name of leaderboardList.querySelectorAll<HTMLElement>('.leader-name')) {
 		const overflow = Math.max(0, name.scrollWidth - name.clientWidth);
@@ -757,29 +728,25 @@ function updateLeaderboardNamePreviews(): void {
 	}
 }
 
-function saveScore(): boolean {
-	if (!pilotName || score === 0) return false;
-	const scores = getScores();
-	const existing = scores.find((entry) => entry.name.toLowerCase() === pilotName.toLowerCase());
-	const achievedAt = nextScoreAchievementTime(scores);
-	const updated = existing
-		? scores.map((entry) => {
-				if (entry !== existing) return entry;
-				const improvedBest = score > entry.score;
-				return {
-					name: pilotName,
-					score: Math.max(entry.score, score),
-					achievedAt: improvedBest ? achievedAt : entry.achievedAt,
-					summit: entry.summit === true || score >= COURSE_MAX_METERS,
-				};
-			})
-		: [...scores, { name: pilotName, score, achievedAt, summit: score >= COURSE_MAX_METERS }];
-	const topScores = rankLeaderboardEntries(updated);
-	const saved = setStoredValue(SCORE_KEY, JSON.stringify(topScores));
-	personalBestScore =
-		topScores.find((entry) => entry.name.toLowerCase() === pilotName.toLowerCase())?.score ?? 0;
-	renderLeaderboard();
-	return saved;
+async function saveScore(name: string, submittedScore: number): Promise<boolean> {
+	if (!name || submittedScore === 0) return false;
+	leaderboardLoadSequence += 1;
+	try {
+		const entry = await postLeaderboardScore(name, submittedScore);
+		leaderboardEntries = rankLeaderboardEntries([
+			...leaderboardEntries.filter((candidate) => candidate.name !== entry.name),
+			entry,
+		]);
+		if (name === pilotName) personalBestScore = entry.score;
+		leaderboardStatus = 'ready';
+		renderLeaderboard();
+		return true;
+	} catch (error) {
+		console.error('The score could not be submitted to the shared leaderboard.', error);
+		leaderboardStatus = 'error';
+		renderLeaderboard();
+		return false;
+	}
 }
 
 function isDaytime(): boolean {
@@ -4651,8 +4618,7 @@ function drawPersonalBestMarker(previewOffset: number): void {
 			if (group.markers.length > 1) {
 				drawMarkerFlag(centerX - 12, islandY, personalMarker.color);
 				drawMarkerFlag(centerX + 12, islandY, overallMarker.color);
-				const isOverallLeader = pilotName.length > 0 &&
-					overallBestName.toLowerCase() === pilotName.toLowerCase();
+				const isOverallLeader = pilotName.length > 0 && overallBestName === pilotName;
 				const label = isOverallLeader
 					? 'YOUR BEST'
 					: `YOUR BEST · #1 ${overallBestName}`;
@@ -4685,8 +4651,7 @@ function drawPersonalBestMarker(previewOffset: number): void {
 		if (group.markers.length > 1) {
 			drawMarkerFlag(centerX - 10, bobbedY, personalMarker.color);
 			drawMarkerFlag(centerX + 10, bobbedY, overallMarker.color);
-			const isOverallLeader = pilotName.length > 0 &&
-				overallBestName.toLowerCase() === pilotName.toLowerCase();
+			const isOverallLeader = pilotName.length > 0 && overallBestName === pilotName;
 			const label = isOverallLeader
 				? 'YOUR BEST'
 				: `YOUR BEST · #1 ${overallBestName}`;
@@ -5179,6 +5144,7 @@ function beginGame(): void {
 }
 
 function startClimb(message: string, startAltitude = 0): void {
+	climbSession += 1;
 	score = climbScoreAtAltitude(startAltitude);
 	altitude = startAltitude;
 	elapsedTime = 0;
@@ -5216,13 +5182,20 @@ function endGame(): void {
 		startClimb(resultMessage, testFlightAltitude);
 		return;
 	}
-	const resultMessage =
-		score === 0
-			? 'Pip missed the ledge. Starting a fresh climb.'
-			: saveScore()
-				? `${pilotName} climbed ${score} m. Starting a fresh climb.`
-				: `${pilotName} climbed ${score} m, but the score could not be saved. Starting a fresh climb.`;
-	startClimb(resultMessage);
+	if (score === 0) {
+		startClimb('Pip missed the ledge. Starting a fresh climb.');
+		return;
+	}
+	const submittedScore = score;
+	const submittedName = pilotName;
+	startClimb(`${submittedName} climbed ${submittedScore} m. Saving score…`);
+	const session = climbSession;
+	void saveScore(submittedName, submittedScore).then((saved) => {
+		if (session !== climbSession) return;
+		gameMessage.textContent = saved
+			? `${submittedName} climbed ${submittedScore} m. Starting a fresh climb.`
+			: `${submittedName} climbed ${submittedScore} m, but the score could not be saved. Starting a fresh climb.`;
+	});
 }
 
 function reachSummit(): void {
@@ -5259,12 +5232,17 @@ function reachSummit(): void {
 		gameMessage.textContent = 'Pip is safe at the summit. Slide left and right to explore the island.';
 		return;
 	}
-	const saved = saveScore();
 	summitVictoryTitle.textContent = 'You made it!';
-	summitVictoryCopy.textContent = saved
-		? 'Pip landed on the 10,000 m summit. Your score is saved. Explore the island with left and right, or start a new climb.'
-		: 'Pip landed on the 10,000 m summit, but the score could not be saved. Explore the island with left and right.';
+	summitVictoryCopy.textContent = 'Saving your score to the shared leaderboard…';
 	gameMessage.textContent = 'Summit reached! Pip cannot jump here, but can slide left and right.';
+	const submittedName = pilotName;
+	const session = climbSession;
+	void saveScore(submittedName, COURSE_MAX_METERS).then((saved) => {
+		if (session !== climbSession || mode !== 'won') return;
+		summitVictoryCopy.textContent = saved
+			? 'Pip landed on the 10,000 m summit. Your score is saved. Explore the island with left and right, or start a new climb.'
+			: 'Pip landed on the 10,000 m summit, but the score could not be saved. Explore the island with left and right.';
+	});
 }
 
 function updateSummit(delta: number): void {
@@ -6168,13 +6146,12 @@ if (savedPilot) {
 	if (restoredName) {
 		pilotName = restoredName;
 		pilotInput.value = pilotName;
-		personalBestScore =
-			getScores().find((entry) => entry.name.toLowerCase() === pilotName.toLowerCase())?.score ?? 0;
 		gameMessage.textContent = `Welcome back, ${pilotName}. Ready for another climb?`;
 	}
 }
 updatePilotFormAvailability();
 renderLeaderboard();
+void refreshLeaderboard(pilotName);
 setLocalFallback();
 window.setInterval(updateLocalConditions, 30_000);
 resizeCanvas();

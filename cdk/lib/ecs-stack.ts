@@ -4,6 +4,7 @@ import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ecsPatterns from 'aws-cdk-lib/aws-ecs-patterns';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import { Construct } from 'constructs';
 
 export interface EcsStackProps extends cdk.StackProps {
@@ -26,6 +27,19 @@ export class EcsStack extends cdk.Stack {
       minLength: 1,
       description: 'Existing image tag in the ECR application repository.',
     });
+
+    const supabaseUrl = new cdk.CfnParameter(this, 'SupabaseUrl', {
+      type: 'String',
+      minLength: 1,
+      allowedPattern: '^https://[A-Za-z0-9.-]+$',
+      description: 'HTTPS URL of the Supabase project used by the leaderboard API.',
+    });
+
+    const supabaseSecret = secretsmanager.Secret.fromSecretNameV2(
+      this,
+      'SupabaseSecretKey',
+      'pips-ascension/supabase-secret-key',
+    );
 
     const vpc = new ec2.Vpc(this, 'ServiceVpc', {
       maxAzs: 2,
@@ -61,6 +75,10 @@ export class EcsStack extends cdk.Stack {
           NODE_ENV: 'production',
           HOST: '0.0.0.0',
           PORT: '4321',
+          SUPABASE_URL: supabaseUrl.valueAsString,
+        },
+        secrets: {
+          SUPABASE_SECRET_KEY: ecs.Secret.fromSecretsManager(supabaseSecret),
         },
         logDriver: ecs.LogDrivers.awsLogs({
           streamPrefix: 'astro',

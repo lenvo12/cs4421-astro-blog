@@ -19,6 +19,11 @@ test('runs the existing tagged ECR image as one small Fargate task', () => {
     Default: 'v1.0.1',
     MinLength: 1,
   });
+  template.hasParameter('SupabaseUrl', {
+    Type: 'String',
+    MinLength: 1,
+    AllowedPattern: '^https://[A-Za-z0-9.-]+$',
+  });
   template.hasResourceProperties('AWS::ECS::TaskDefinition', {
     Cpu: '256',
     Memory: '512',
@@ -32,6 +37,13 @@ test('runs the existing tagged ECR image as one small Fargate task', () => {
           { Name: 'NODE_ENV', Value: 'production' },
           { Name: 'HOST', Value: '0.0.0.0' },
           { Name: 'PORT', Value: '4321' },
+          { Name: 'SUPABASE_URL', Value: Match.anyValue() },
+        ]),
+        Secrets: Match.arrayWith([
+          Match.objectLike({
+            Name: 'SUPABASE_SECRET_KEY',
+            ValueFrom: Match.anyValue(),
+          }),
         ]),
         LogConfiguration: Match.objectLike({
           LogDriver: 'awslogs',
