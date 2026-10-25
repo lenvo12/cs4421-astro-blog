@@ -6,6 +6,7 @@ import {
 	isDeveloperAccessConfigured,
 	verifyDeveloperPassword,
 } from '../../lib/developer-auth';
+import { isSameOriginRequest } from '../../lib/request-origin';
 
 function redirect(location: string): Response {
 	return new Response(null, {
@@ -15,16 +16,6 @@ function redirect(location: string): Response {
 			Location: location,
 		},
 	});
-}
-
-function isSameOriginRequest(request: Request): boolean {
-	const origin = request.headers.get('origin');
-	if (!origin) return true;
-	try {
-		return new URL(origin).origin === new URL(request.url).origin;
-	} catch {
-		return false;
-	}
 }
 
 export const POST: APIRoute = async ({ cookies, request }) => {

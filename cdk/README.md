@@ -31,12 +31,20 @@ existing ECR repository named `astro-blog` (override with
 `ECR_REPOSITORY_NAME`). It does not create another ECR repository.
 
 The service uses one small Fargate task in public subnets behind an HTTP
-Application Load Balancer. It creates no NAT Gateways, checks
-`/api/health`, rolls back failed ECS deployments, and sends container logs to
-a CloudWatch log group retained for seven days. This is a cost-conscious lab
-setup, not a high-availability production setup. The ALB and public IPv4
-addresses can incur charges for as long as the stack exists, even when the
-service is idle.
+Application Load Balancer and a separate CloudFront distribution. CloudFront
+provides the browser-facing HTTPS URL; Astro SSR still runs in the Node
+container on ECS. Requests, cookies, query strings, and all HTTP methods are
+forwarded to the service without caching. Use the `CloudFrontUrl` stack output
+for browser access. The load balancer remains publicly reachable over HTTP as
+the CloudFront origin; this does not force clients to use CloudFront or make
+the ALB private.
+
+The stack creates no NAT Gateways, checks `/api/health`, rolls back failed ECS
+deployments, and sends container logs to a CloudWatch log group retained for
+seven days. This is a cost-conscious lab setup, not a high-availability
+production setup. The ALB, CloudFront distribution, and public IPv4 addresses
+can incur charges for as long as the stack exists, even when the service is
+idle.
 
 The leaderboard API reads `SUPABASE_URL` from the `SupabaseUrl` stack
 parameter and `SUPABASE_SECRET_KEY` from the existing Secrets Manager secret
@@ -85,9 +93,11 @@ $SupabaseUrl = 'https://your-project-ref.supabase.co'
 npx cdk deploy EcsStack --parameters EcsStack:ImageTag=$ImageTag --parameters EcsStack:SupabaseUrl=$SupabaseUrl
 ```
 
-The `LoadBalancerDnsName` output is the public HTTP address. The existing
-static website remains unchanged. To stop ALB and Fargate charges after the
-lab, remove the ECS stack:
+The `CloudFrontUrl` output is the HTTPS address for the SSR service. The
+`LoadBalancerDnsName` output is the HTTP origin hostname; use the CloudFront
+URL in a browser. The existing static website and its CloudFront distribution
+remain unchanged. To stop ALB, CloudFront, and Fargate charges after the lab,
+remove the ECS stack:
 
 ```powershell
 npx cdk destroy EcsStack

@@ -6,6 +6,7 @@ import {
 	parseScoreSubmission,
 	submitLeaderboardScore,
 } from '../../lib/supabase-leaderboard';
+import { isSameOriginRequest } from '../../lib/request-origin';
 
 function jsonResponse(
 	body: unknown,
@@ -18,20 +19,6 @@ function jsonResponse(
 			'Content-Type': 'application/json; charset=utf-8',
 		},
 	});
-}
-
-function isSameOriginRequest(request: Request): boolean {
-	const origin = request.headers.get('origin');
-	if (!origin) return true;
-	try {
-		const originUrl = new URL(origin);
-		const requestUrl = new URL(request.url);
-		const forwardedProtocol = request.headers.get('x-forwarded-proto')?.split(',')[0]?.trim();
-		const protocol = forwardedProtocol ? `${forwardedProtocol}:` : requestUrl.protocol;
-		return originUrl.host === requestUrl.host && originUrl.protocol === protocol;
-	} catch {
-		return false;
-	}
 }
 
 function backendErrorResponse(error: unknown, operation: string): Response {

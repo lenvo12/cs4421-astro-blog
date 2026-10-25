@@ -80,6 +80,54 @@ test('uses public subnets without NAT gateways and exposes an HTTP load balancer
   });
 });
 
+test('serves uncached SSR through an HTTPS CloudFront distribution', () => {
+  const template = synthesize();
+
+  template.resourceCountIs('AWS::CloudFront::Distribution', 1);
+  template.hasResourceProperties('AWS::CloudFront::Distribution', {
+    DistributionConfig: {
+      DefaultCacheBehavior: {
+        AllowedMethods: Match.arrayWith([
+          'GET',
+          'HEAD',
+          'OPTIONS',
+          'PUT',
+          'PATCH',
+          'POST',
+          'DELETE',
+        ]),
+        CachePolicyId: '4135ea2d-6df8-44a3-9df3-4b5a84be39ad',
+        OriginRequestPolicyId: '216adef6-5c7f-47e4-b989-5492eafa07d3',
+        ViewerProtocolPolicy: 'redirect-to-https',
+      },
+      CustomErrorResponses: Match.arrayWith([
+        {
+          ErrorCode: 404,
+          ErrorCachingMinTTL: 0,
+        },
+      ]),
+      Origins: Match.arrayWith([
+        Match.objectLike({
+          OriginCustomHeaders: Match.arrayWith([
+            {
+              HeaderName: 'X-CloudFront-Viewer-Proto',
+              HeaderValue: 'https',
+            },
+          ]),
+          CustomOriginConfig: Match.objectLike({
+            OriginProtocolPolicy: 'http-only',
+          }),
+        }),
+      ]),
+    },
+  });
+  template.hasOutput('CloudFrontUrl', {
+    Value: Match.objectLike({
+      'Fn::Join': Match.anyValue(),
+    }),
+  });
+});
+
 test('checks the existing health route and retains logs for one week', () => {
   const template = synthesize();
 

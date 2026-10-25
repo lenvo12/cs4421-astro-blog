@@ -1,4 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
+import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
+import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
@@ -93,9 +95,35 @@ export class EcsStack extends cdk.Stack {
       unhealthyThresholdCount: 3,
     });
 
+    const distribution = new cloudfront.Distribution(this, 'HttpsDistribution', {
+      defaultBehavior: {
+        origin: new origins.HttpOrigin(service.loadBalancer.loadBalancerDnsName, {
+          customHeaders: {
+            'X-CloudFront-Viewer-Proto': 'https',
+          },
+          protocolPolicy: cloudfront.OriginProtocolPolicy.HTTP_ONLY,
+        }),
+        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+        cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+        originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER,
+      },
+      errorResponses: [400, 403, 404, 405, 414, 416, 500, 501, 502, 503, 504].map(
+        (httpStatus) => ({
+          httpStatus,
+          ttl: cdk.Duration.seconds(0),
+        }),
+      ),
+    });
+
     new cdk.CfnOutput(this, 'LoadBalancerDnsName', {
       value: service.loadBalancer.loadBalancerDnsName,
-      description: 'HTTP URL hostname for the running Astro service.',
+      description: 'HTTP origin hostname; use CloudFrontUrl for browser access.',
+    });
+
+    new cdk.CfnOutput(this, 'CloudFrontUrl', {
+      value: `https://${distribution.distributionDomainName}`,
+      description: 'HTTPS URL for the Astro SSR service.',
     });
 
     new cdk.CfnOutput(this, 'CloudWatchLogGroup', {
