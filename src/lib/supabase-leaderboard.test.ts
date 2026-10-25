@@ -11,9 +11,10 @@ describe('leaderboard submission validation', () => {
 	});
 
 	it('accepts valid names and scores through the summit limit', () => {
-		expect(parseScoreSubmission({ name: 'Pip', score: 10_000 })).toEqual({
+		expect(parseScoreSubmission({ name: 'Pip', score: 10_000, runToken: 'signed-token' })).toEqual({
 			name: 'Pip',
 			score: 10_000,
+			runToken: 'signed-token',
 		});
 	});
 
@@ -22,6 +23,7 @@ describe('leaderboard submission validation', () => {
 		expect(parseScoreSubmission({ name: 'Pip', score: 0 })).toBeNull();
 		expect(parseScoreSubmission({ name: 'Pip', score: 10_001 })).toBeNull();
 		expect(parseScoreSubmission({ name: 'Pip', score: 1.5 })).toBeNull();
+		expect(parseScoreSubmission({ name: 'Pip', score: 500 })).toBeNull();
 		expect(parseScoreSubmission(null)).toBeNull();
 	});
 });

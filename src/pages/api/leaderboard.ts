@@ -2,21 +2,25 @@ import type { APIRoute } from 'astro';
 import {
 	LeaderboardBackendError,
 	getLeaderboard,
+	isScoreRunTokenValid,
 	normalizeCallsign,
 	parseScoreSubmission,
 	submitLeaderboardScore,
 } from '../../lib/supabase-leaderboard';
 import { isSameOriginRequest } from '../../lib/request-origin';
+import { consumeScoreRunRateLimit } from '../../lib/score-run-protection';
 
 function jsonResponse(
 	body: unknown,
 	status = 200,
+	extraHeaders: Record<string, string> = {},
 ): Response {
 	return new Response(JSON.stringify(body), {
 		status,
 		headers: {
 			'Cache-Control': 'no-store',
 			'Content-Type': 'application/json; charset=utf-8',
+			...extraHeaders,
 		},
 	});
 }
@@ -66,6 +70,23 @@ export const POST: APIRoute = async ({ request }) => {
 	const submission = parseScoreSubmission(body);
 	if (!submission) {
 		return jsonResponse({ error: 'The callsign or score is invalid.' }, 400);
+	}
+
+	const retryAfterSeconds = consumeScoreRunRateLimit('submit', submission.name);
+	if (retryAfterSeconds !== null) {
+		return jsonResponse(
+			{ error: 'Too many score submissions for this callsign.' },
+			429,
+			{ 'Retry-After': `${retryAfterSeconds}` },
+		);
+	}
+
+	try {
+		if (!isScoreRunTokenValid(submission.runToken, submission.name, submission.score)) {
+			return jsonResponse({ error: 'The score does not match a recent plausible game run.' }, 400);
+		}
+	} catch (error) {
+		return backendErrorResponse(error, 'validation');
 	}
 
 	try {

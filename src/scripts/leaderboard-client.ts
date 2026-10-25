@@ -46,14 +46,40 @@ export async function fetchLeaderboard(name?: string): Promise<LeaderboardSnapsh
 	return data;
 }
 
-export async function postLeaderboardScore(name: string, score: number): Promise<ScoreEntry> {
+export async function createScoreRun(name: string): Promise<string> {
+	const data = await readJson(await fetch('/api/leaderboard/run', {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify({ name }),
+	}));
+	if (
+		typeof data !== 'object' ||
+		data === null ||
+		!('token' in data) ||
+		typeof data.token !== 'string' ||
+		data.token.length === 0 ||
+		data.token.length > 1024
+	) {
+		throw new Error('The score run response is invalid.');
+	}
+	return data.token;
+}
+
+export async function postLeaderboardScore(
+	name: string,
+	score: number,
+	runToken: string,
+): Promise<ScoreEntry> {
 	const data = await readJson(await fetch('/api/leaderboard', {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 		},
-		body: JSON.stringify({ name, score }),
+		body: JSON.stringify({ name, score, runToken }),
 	}));
 	if (!isScoreEntry(data)) throw new Error('The leaderboard submission response is invalid.');
 	return data;

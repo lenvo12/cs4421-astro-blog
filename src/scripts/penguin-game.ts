@@ -53,7 +53,7 @@ import {
 	rankLeaderboardEntries,
 	type ScoreEntry,
 } from './leaderboard';
-import { fetchLeaderboard, postLeaderboardScore } from './leaderboard-client';
+import { createScoreRun, fetchLeaderboard, postLeaderboardScore } from './leaderboard-client';
 interface BackgroundElement {
 	type:
 		| 'cloud' | 'bird' | 'plane' | 'distantPlane' | 'star' | 'comet' | 'station' | 'satellite' | 'asteroid'
@@ -313,6 +313,7 @@ let leaderboardEntries: ScoreEntry[] = [];
 let leaderboardStatus: 'loading' | 'ready' | 'error' = 'loading';
 let leaderboardLoadSequence = 0;
 let climbSession = 0;
+let activeScoreRunToken: Promise<string | null> | null = null;
 let direction = 0;
 let score = 0;
 let personalBestScore = 0;
@@ -707,11 +708,17 @@ function updateLeaderboardNamePreviews(): void {
 	}
 }
 
-async function saveScore(name: string, submittedScore: number): Promise<boolean> {
-	if (!name || submittedScore === 0) return false;
+async function saveScore(
+	name: string,
+	submittedScore: number,
+	runToken: Promise<string | null> | null,
+): Promise<boolean> {
+	if (!name || submittedScore === 0 || runToken === null) return false;
 	leaderboardLoadSequence += 1;
 	try {
-		const entry = await postLeaderboardScore(name, submittedScore);
+		const token = await runToken;
+		if (!token) return false;
+		const entry = await postLeaderboardScore(name, submittedScore, token);
 		leaderboardEntries = rankLeaderboardEntries([
 			...leaderboardEntries.filter((candidate) => candidate.name !== entry.name),
 			entry,
@@ -4983,6 +4990,10 @@ function beginGame(): void {
 
 function startClimb(message: string): void {
 	climbSession += 1;
+	activeScoreRunToken = createScoreRun(pilotName).catch((error: unknown) => {
+		console.error('The score run could not be validated.', error);
+		return null;
+	});
 	score = 0;
 	altitude = 0;
 	elapsedTime = 0;
@@ -5016,9 +5027,10 @@ function endGame(): void {
 	}
 	const submittedScore = score;
 	const submittedName = pilotName;
+	const runToken = activeScoreRunToken;
 	startClimb(`${submittedName} climbed ${submittedScore} m. Saving score…`);
 	const session = climbSession;
-	void saveScore(submittedName, submittedScore).then((saved) => {
+	void saveScore(submittedName, submittedScore, runToken).then((saved) => {
 		if (session !== climbSession) return;
 		gameMessage.textContent = saved
 			? `${submittedName} climbed ${submittedScore} m. Starting a fresh climb.`
@@ -5027,6 +5039,7 @@ function endGame(): void {
 }
 
 function reachSummit(): void {
+	const runToken = activeScoreRunToken;
 	score = COURSE_MAX_METERS;
 	scoreValue.textContent = `${score}`;
 	mode = 'won';
@@ -5058,7 +5071,7 @@ function reachSummit(): void {
 	gameMessage.textContent = 'Summit reached! Pip cannot jump here, but can slide left and right.';
 	const submittedName = pilotName;
 	const session = climbSession;
-	void saveScore(submittedName, COURSE_MAX_METERS).then((saved) => {
+	void saveScore(submittedName, COURSE_MAX_METERS, runToken).then((saved) => {
 		if (session !== climbSession || mode !== 'won') return;
 		summitVictoryCopy.textContent = saved
 			? 'Pip landed on the 10,000 m summit. Your score is saved. Explore the island with left and right, or start a new climb.'

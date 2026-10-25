@@ -1,3 +1,5 @@
+import { createScoreRunToken, verifyScoreRunToken } from './score-run-protection';
+
 export interface LeaderboardScore {
 	name: string;
 	score: number;
@@ -13,6 +15,7 @@ export interface LeaderboardSnapshot {
 export interface ScoreSubmission {
 	name: string;
 	score: number;
+	runToken: string;
 }
 
 export class LeaderboardBackendError extends Error {
@@ -42,11 +45,14 @@ export function parseScoreSubmission(value: unknown): ScoreSubmission | null {
 		typeof record.score !== 'number' ||
 		!Number.isSafeInteger(record.score) ||
 		record.score < 1 ||
-		record.score > 10_000
+		record.score > 10_000 ||
+		typeof record.runToken !== 'string' ||
+		record.runToken.length === 0 ||
+		record.runToken.length > 1024
 	) {
 		return null;
 	}
-	return { name, score: record.score };
+	return { name, score: record.score, runToken: record.runToken };
 }
 
 function getSupabaseConfig(): { baseUrl: string; secretKey: string } {
@@ -71,6 +77,20 @@ function getSupabaseConfig(): { baseUrl: string; secretKey: string } {
 	}
 
 	return { baseUrl: parsedUrl.origin, secretKey };
+}
+
+export function issueScoreRunToken(name: string): string {
+	const { secretKey } = getSupabaseConfig();
+	return createScoreRunToken(name, secretKey);
+}
+
+export function isScoreRunTokenValid(
+	token: string,
+	name: string,
+	score: number,
+): boolean {
+	const { secretKey } = getSupabaseConfig();
+	return verifyScoreRunToken(token, name, score, secretKey);
 }
 
 function mapSupabaseScore(value: unknown): LeaderboardScore {
