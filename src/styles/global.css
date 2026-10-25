@@ -1195,7 +1195,7 @@ textarea::placeholder {
 
 .leaderboard-list li {
 	display: grid;
-	flex: 1 0 49px;
+	flex: 0 0 49px;
 	grid-template-columns: 28px minmax(0, 1fr) 68px;
 	align-items: center;
 	gap: 9px;
