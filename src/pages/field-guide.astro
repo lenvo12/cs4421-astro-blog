@@ -1,0 +1,65 @@
+---
+import BaseHead from '../components/BaseHead.astro';
+import Footer from '../components/Footer.astro';
+import Header from '../components/Header.astro';
+import { SITE_TITLE } from '../consts';
+
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<BaseHead title={`${SITE_TITLE} | Field guide`} description="Explore the gameplay features, zones, and scenery in Pip’s Ascension." />
+	</head>
+	<body>
+		<div class="site-shell">
+			<Header />
+			<main class="field-guide-page">
+				<header class="field-guide-heading">
+					<p class="card-kicker">PIP’S ASCENSION</p>
+					<h1 id="field-guide-title">Pip’s route &amp; feature guide</h1>
+					<p>Get a preview of the worlds, hazards, and boosts Pip can encounter on the climb.</p>
+				</header>
+
+				<section class="course-guide field-guide-card" aria-labelledby="field-guide-title">
+					<div class="course-guide-content">
+						<div class="course-guide-table-wrap">
+							<table>
+								<thead>
+									<tr>
+										<th scope="col">Height</th>
+										<th scope="col">Feature</th>
+										<th scope="col">What to expect</th>
+									</tr>
+								</thead>
+								<tbody>
+									<tr><td>0–10,000 m</td><td>Moving platforms</td><td>Some ice platforms glide from side to side. Watch their path and time your jump.</td></tr>
+									<tr><td>900–10,000 m</td><td>Cracked platforms</td><td>Fragile ledges crumble after Pip lands, so jump off before they break.</td></tr>
+									<tr><td>0–8,999 m</td><td>Fish pickups</td><td>Catch a fish on the way up to launch Pip higher; bigger fish give bigger boosts.</td></tr>
+									<tr><td>0–8,999 m</td><td>Slingshot ledges</td><td>Land on a special slingshot ledge for a powerful jump skyward.</td></tr>
+									<tr><td>7,000–10,000 m</td><td>Nebula ledges</td><td>Some high-altitude ledges fade away and return. Wait for the right moment to land.</td></tr>
+									<tr><td>8,000–10,000 m</td><td>Low gravity</td><td>Pip floats longer and steers more gently, making each jump feel lighter.</td></tr>
+									<tr><td>0–8,999 m</td><td>Rescue fish</td><td>If Pip gets stuck with no clear way forward, a free rescue fish arrives to help him keep climbing.</td></tr>
+									<tr><td>0–10,000 m</td><td>Recovery arm</td><td>After a fall, there’s a 20% chance a robotic arm will catch Pip and carry him to a safe ledge.</td></tr>
+									<tr><td>1,000–10,000 m</td><td>Asteroid impacts</td><td>Watch out for asteroids; a collision can send Pip flying.</td></tr>
+									<tr><td>400–800 m</td><td>Airliner encounters</td><td>Some aircraft give Pip a boost as they pass; others are just distant scenery.</td></tr>
+									<tr><td>0–1,000 m</td><td>Earth's Atmosphere</td><td>Begin above the island, then climb through clouds and changing daylight. You can opt in to local weather.</td></tr>
+									<tr><td>1,000–2,000 m</td><td>The Moon</td><td>Explore the gray lunar landscape as a probe passes by.</td></tr>
+									<tr><td>2,000–3,000 m</td><td>Mars</td><td>Pass the red planet, where rovers, helicopters, and spacecraft explore.</td></tr>
+									<tr><td>3,000–4,000 m</td><td>Jupiter</td><td>Fly past giant Jupiter, with its swirling bands, probes, and passing comets.</td></tr>
+									<tr><td>4,000–5,000 m</td><td>Saturn</td><td>Soar by Saturn and its broad rings as spacecraft and comets pass nearby.</td></tr>
+									<tr><td>5,000–6,000 m</td><td>Uranus</td><td>Glide past icy Uranus under soft, shimmering auroras.</td></tr>
+									<tr><td>6,000–7,000 m</td><td>Neptune</td><td>Explore deep-blue Neptune as probes and comets drift by.</td></tr>
+									<tr><td>7,000–8,000 m</td><td>Kuiper Belt</td><td>Enter Pluto’s icy neighborhood, filled with distant worlds and comets.</td></tr>
+									<tr><td>8,000–9,000 m</td><td>Oort Cloud</td><td>Travel through the Solar System’s distant edge among icy objects and long-tailed comets.</td></tr>
+									<tr><td>9,000–10,000 m</td><td>Interstellar Space</td><td>Venture beyond the Solar System into colorful nebulae and distant stars.</td></tr>
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</section>
+			</main>
+			<Footer />
+		</div>
+	</body>
+</html>

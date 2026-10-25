@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+	<defs>
+		<linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+			<stop offset="0" stop-color="#10283e" />
+			<stop offset="0.55" stop-color="#176274" />
+			<stop offset="1" stop-color="#78b6b2" />
+		</linearGradient>
+		<radialGradient id="aurora">
+			<stop offset="0" stop-color="#b7f0d8" stop-opacity="0.38" />
+			<stop offset="1" stop-color="#b7f0d8" stop-opacity="0" />
+		</radialGradient>
+		<linearGradient id="photo-fade" x1="0" y1="0" x2="0" y2="1">
+			<stop offset="0" stop-color="#10283e" stop-opacity="0.1" />
+			<stop offset="1" stop-color="#10283e" stop-opacity="0.62" />
+		</linearGradient>
+		<linearGradient id="photo-reveal" x1="0" y1="0" x2="1" y2="0">
+			<stop offset="0" stop-color="#fff" stop-opacity="0" />
+			<stop offset="0.36" stop-color="#fff" stop-opacity="0.15" />
+			<stop offset="0.72" stop-color="#fff" stop-opacity="0.9" />
+			<stop offset="1" stop-color="#fff" />
+		</linearGradient>
+		<mask id="photo-mask">
+			<rect x="620" y="290" width="580" height="340" fill="url(#photo-reveal)" />
+		</mask>
+		<filter id="soft-shadow" x="-30%" y="-30%" width="160%" height="180%">
+			<feDropShadow dx="0" dy="12" stdDeviation="12" flood-color="#081826" flood-opacity="0.38" />
+		</filter>
+	</defs>
+
+	<rect width="1200" height="630" fill="url(#sky)" />
+	<ellipse cx="880" cy="170" rx="420" ry="320" fill="url(#aurora)" />
+	<g fill="#f2fbf7" opacity="0.72">
+		<circle cx="76" cy="82" r="3" />
+		<circle cx="410" cy="74" r="2" />
+		<circle cx="562" cy="145" r="3" />
+		<circle cx="735" cy="66" r="2" />
+		<circle cx="1100" cy="98" r="3" />
+		<circle cx="650" cy="230" r="2" />
+		<circle cx="1040" cy="255" r="2" />
+	</g>
+	<image href="/game/mountain-landscape.webp" x="620" y="290" width="580" height="340" preserveAspectRatio="xMidYMax slice" opacity="0.82" mask="url(#photo-mask)" />
+	<rect x="620" y="290" width="580" height="340" fill="url(#photo-fade)" mask="url(#photo-mask)" />
+	<path d="M0 538c145-46 248-16 372 16 100 26 194 13 282-14v90H0z" fill="#123d50" opacity="0.72" />
+
+	<text x="76" y="105" fill="#b8e6d8" font-family="Arial, sans-serif" font-size="20" font-weight="700" letter-spacing="4">A PENGUIN JUMPING GAME</text>
+	<text x="72" y="212" fill="#fffefa" font-family="Arial, sans-serif" font-size="82" font-weight="800" letter-spacing="-3">Pip’s</text>
+	<text x="72" y="302" fill="#fffefa" font-family="Arial, sans-serif" font-size="82" font-weight="800" letter-spacing="-3">Ascension</text>
+	<text x="78" y="370" fill="#e5f4ef" font-family="Arial, sans-serif" font-size="30" font-weight="600">Will you be the first to reach the top?</text>
+	<g filter="url(#soft-shadow)">
+		<rect x="78" y="418" width="324" height="62" rx="18" fill="#ff977d" />
+		<text x="104" y="458" fill="#183d50" font-family="Arial, sans-serif" font-size="23" font-weight="800" letter-spacing="1">CLIMB TO 10,000 M</text>
+	</g>
+
+	<g filter="url(#soft-shadow)">
+		<image href="/game/pip-jump.png" x="790" y="170" width="355" height="350" preserveAspectRatio="xMidYMid meet" image-rendering="pixelated" />
+		<image href="/game/cone.png" x="914" y="142" width="96" height="88" preserveAspectRatio="xMidYMid meet" image-rendering="pixelated" />
+	</g>
+</svg>
