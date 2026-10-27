@@ -11,23 +11,37 @@ The static stack remains in the CDK app but is not deployed by the ECS workflow.
 Do not run an unqualified `cdk deploy`, which could deploy both stacks. Use
 `cdk deploy EcsStack` when working on the container service.
 
-## ECS deployment workflow
+## ECS deployment workflows
 
-`.github/workflows/deploy-ecs.yml` is manually triggered from GitHub Actions.
-It deploys only `EcsStack`, using the selected image tag already present in the
-`astro-blog` ECR repository. It does not build or push an image, and it does
-not update the legacy S3/CloudFront site. Configure the repository actions
-secrets `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` with credentials
-permitted to deploy the stack in `us-east-1`.
+`.github/workflows/deploy-container.yml` runs on every push to `main`, including
+pull request merges. It installs dependencies, runs Astro tests/check/lint/build
+and CDK tests/build, then builds a Linux AMD64 Docker image tagged with the
+commit SHA, pushes it to the existing `astro-blog` ECR repository, and deploys
+only `EcsStack` with that image. A failed check prevents image publishing and
+deployment. Docker runs on GitHub's hosted runner; Docker Desktop does not need
+to be running on a developer's computer.
 
-In GitHub, open **Actions > Deploy ECS service > Run workflow**, select the
-branch containing the workflow, and enter an existing ECR image tag (for
-example, `v1.0.1`). Merging code alone does not deploy a new container image.
-Build and push the image manually first; automated image building and pushing
-can be added to a later workflow.
+Configure these repository settings under **Settings > Secrets and variables >
+Actions**:
 
-`EcsStack` is a separate, manually deployed staging service. It imports the
-existing ECR repository named `astro-blog` (override with
+* **Secrets:** `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`, using credentials
+  permitted to push to the existing ECR repository and deploy `EcsStack` in
+  `us-east-1`.
+* **Variables:** `SUPABASE_URL` with the HTTPS Supabase project URL and
+  `PUBLIC_SITE_ORIGIN` with the ECS stack's `CloudFrontUrl` value.
+
+The workflow does not build or deploy the legacy static S3/CloudFront site.
+Concurrent automated and manual ECS deployments share a concurrency group so
+they do not deploy at the same time.
+
+`.github/workflows/deploy-ecs.yml` remains available for manually deploying an
+existing image tag, such as for a rollback. Open **Actions > Deploy ECS service
+> Run workflow**, select the branch containing the workflow, and enter the
+image tag, Supabase URL, and public site origin. It deploys only `EcsStack`; it
+does not build or push an image.
+
+`EcsStack` is a separate staging service. It imports the existing ECR
+repository named `astro-blog` (override with
 `ECR_REPOSITORY_NAME`). It does not create another ECR repository.
 
 The service uses one small Fargate task in public subnets behind an HTTP
@@ -52,8 +66,8 @@ parameter and `SUPABASE_SECRET_KEY` from the existing Secrets Manager secret
 stack and store only the Supabase server secret key in it. The ECS task role
 receives permission to read the secret; the key is injected at task startup and
 is not included in the container image or CloudFormation template. The
-`SupabaseUrl` parameter is required by both CDK and the GitHub deployment
-workflow. The `PublicSiteOrigin` parameter must be set to the service's
+`SupabaseUrl` parameter is required by CDK and both GitHub deployment
+workflows. The `PublicSiteOrigin` parameter must be set to the service's
 `CloudFrontUrl` output so browser score submissions can be checked against the
 public origin even though CloudFront forwards requests to the ALB.
 
@@ -72,9 +86,8 @@ npx cdk synth EcsStack
 npx cdk diff EcsStack
 ```
 
-The image build and push remain manual for now. Use a new version tag not
-already used in ECR. From the repository root, derive the registry address
-from the currently authenticated AWS account:
+For manual image builds, use a unique tag. From the repository root, derive the
+registry address from the currently authenticated AWS account:
 
 ```powershell
 $ImageTag = 'v1.0.2'

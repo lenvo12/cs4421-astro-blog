@@ -1,0 +1,107 @@
+name: Build and deploy ECS container
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ecs-service-deployment
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            cdk/package-lock.json
+
+      - name: Install Astro dependencies
+        run: npm ci
+
+      - name: Install CDK dependencies
+        run: npm ci
+        working-directory: cdk
+
+      - name: Run Astro unit tests
+        run: npm run test:unit
+
+      - name: Check Astro project
+        run: npx astro check
+
+      - name: Lint Astro project
+        run: npm run lint
+
+      - name: Build Astro site
+        run: npm run build
+
+      - name: Run CDK tests
+        run: npm test
+        working-directory: cdk
+
+      - name: Build CDK project
+        run: npm run build
+        working-directory: cdk
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          PUBLIC_SITE_ORIGIN: ${{ vars.PUBLIC_SITE_ORIGIN }}
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          if [[ ! "$SUPABASE_URL" =~ ^https://[A-Za-z0-9.-]+$ ]]; then
+            echo "Configure the SUPABASE_URL repository variable with the HTTPS Supabase project URL." >&2
+            exit 1
+          fi
+          if [[ ! "$PUBLIC_SITE_ORIGIN" =~ ^https://[A-Za-z0-9.-]+$ ]]; then
+            echo "Configure the PUBLIC_SITE_ORIGIN repository variable with the ECS CloudFront URL." >&2
+            exit 1
+          fi
+          docker buildx build \
+            --platform linux/amd64 \
+            --tag "$ECR_REGISTRY/astro-blog:$IMAGE_TAG" \
+            --push \
+            .
+
+      - name: Deploy ECS service
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          PUBLIC_SITE_ORIGIN: ${{ vars.PUBLIC_SITE_ORIGIN }}
+        run: |
+          npx cdk deploy EcsStack \
+            --parameters "EcsStack:ImageTag=$IMAGE_TAG" \
+            --parameters "EcsStack:SupabaseUrl=$SUPABASE_URL" \
+            --parameters "EcsStack:PublicSiteOrigin=$PUBLIC_SITE_ORIGIN" \
+            --require-approval never
+        working-directory: cdk
